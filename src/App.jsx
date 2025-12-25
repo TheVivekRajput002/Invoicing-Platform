@@ -8,12 +8,9 @@ function App() {
 
   return (
     <div className='bg-[#F9FAFB]'>
-      <div className='py-8'>
+      <div className='py-16'>
         <Header />
       </div>
-
-      <Invoice />
-
 
     </div>
   )

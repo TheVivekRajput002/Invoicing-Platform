@@ -2,6 +2,7 @@ import React from 'react'
 import { useState,useEffect } from 'react'
 import Input from '../components/Input';
 
+
 const Invoice = () => {
 
     const [number, setNumber] = useState('');
@@ -35,9 +36,9 @@ const Invoice = () => {
 
                         <Input id="name" type="text" value={name} fxn={(e) => { setName(e.target.value); console.log(name) }} placeholder="Customer Name" />
                         <Input id="Address" type="text" value={address} fxn={(e) => { setAddress(e.target.value); console.log(address) }} placeholder="Customer Address" />
-                        <Input id="number" type="number" value={number} fxn={(e) => { setNumber(e.target.value); console.log(number) }} placeholder="Phone Number" />
+                        <Input id="number" type="number" value={number} fxn={(e) => { setNumber(e.target.value); console.log(number) }} placeholder="Mobile Number" />
                         <Input id="date_time" type="datetime-local" value={dateTime} fxn={(e) => { setDateTime(e.target.value); console.log(number) }} placeholder="Date & Time" />
-
+                        <button className='py-3 px-1 rounded-2xl font-semibold bg-blue-500 text-xl' >Submit</button>
 
                     </div>
 
