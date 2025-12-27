@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Save, ArrowLeft, ArrowRight } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 const InvoiceGenerator = () => {
+
+
     const [step, setStep] = useState(1);
     const [paymentMode, setPaymentMode] = useState('unpaid'); // MOVED TO TOP LEVEL
 
@@ -86,32 +89,25 @@ const InvoiceGenerator = () => {
         setSaving(true);
 
         try {
-            // Simulating Supabase save - replace with actual Supabase code
-            console.log('Saving invoice:', {
-                customer: customerDetails,
-                products: products,
-                paymentMode: paymentMode,
-                grandTotal: calculateGrandTotal()
-            });
+            let customerId;  // ✅ ADD THIS LINE - Declare the variable!
 
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // ACTUAL SUPABASE CODE (uncomment when ready):
-
-            const supabase = require('./supabaseClient').supabase;
-
-            // 1. Check if customer exists
-            let customerId;
-            const { data: existingCustomer } = await supabase
+            // Check if customer exists
+            const { data: existingCustomers, error: fetchError } = await supabase
                 .from('customers')
                 .select('id')
-                .eq('phone_number', customerDetails.phoneNumber)
-                .single();
+                .eq('phone_number', customerDetails.phoneNumber);
 
-            if (existingCustomer) {
-                customerId = existingCustomer.id;
+            if (fetchError) {
+                throw new Error('Failed to check existing customer: ' + fetchError.message);
+            }
+
+            // Customer exists - use existing ID
+            if (existingCustomers && existingCustomers.length > 0) {
+                customerId = existingCustomers[0].id;
+                console.log('Found existing customer:', customerId);
             } else {
+                // Customer doesn't exist - create new one
+                console.log('Creating new customer...');
                 const { data: newCustomer, error: customerError } = await supabase
                     .from('customers')
                     .insert([
@@ -124,11 +120,20 @@ const InvoiceGenerator = () => {
                     .select()
                     .single();
 
-                if (customerError) throw customerError;
+                if (customerError) {
+                    throw customerError;
+                }
+
                 customerId = newCustomer.id;
+                console.log('Created new customer:', customerId);
             }
 
-            // 2. Insert invoice
+            // Validate customerId before using it
+            if (!customerId) {
+                throw new Error('Failed to get or create customer ID');
+            }
+
+            // Insert invoice
             const { data: invoiceData, error: invoiceError } = await supabase
                 .from('invoices')
                 .insert([
@@ -144,9 +149,11 @@ const InvoiceGenerator = () => {
                 .select()
                 .single();
 
-            if (invoiceError) throw invoiceError;
+            if (invoiceError) {
+                throw invoiceError;
+            }
 
-            // 3. Insert invoice items
+            // Insert invoice items
             const itemsToInsert = products.map(product => ({
                 invoice_id: invoiceData.id,
                 serial_number: product.serialNumber,
@@ -162,9 +169,13 @@ const InvoiceGenerator = () => {
                 .from('invoice_items')
                 .insert(itemsToInsert);
 
+            if (itemsError) {
+                throw itemsError;
+            }
+
             alert('Invoice saved successfully!');
 
-            // Reset form - FIXED: use correct field names
+            // Reset form
             setStep(1);
             setCustomerDetails({
                 customerName: '',

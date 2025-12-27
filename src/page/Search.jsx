@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../supabaseClient';
 import { Search as SearchIcon, User, FileText, ShoppingCart, AlertCircle, DollarSign, Calendar, Phone, Hash } from 'lucide-react';
 
 const Search = () => {
@@ -18,10 +18,7 @@ const Search = () => {
   const [invoiceItems, setInvoiceItems] = useState([]);
   const [stats, setStats] = useState({ total: 0, paid: 0, unpaid: 0 });
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  const supabase = createClient(supabaseUrl, supabaseKey)
 
   useEffect(() => {
     fetchInitialData();
@@ -31,39 +28,55 @@ const Search = () => {
     setLoading(true);
 
     // Fetch customers
-    await supabase.from('customers').select('*').order('created_at', { ascending: false }).then(({ data, error }) => {
-      if (!error) {
-        setCustomers(data);
-        setFilteredCustomers(data);
-      }
-    });
+    const { data: customersData } = await supabase
+      .from('customers')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    // Fetch invoices
-    let allInvoices = [];
-    await supabase.from('invoices').select('*').order('bill_date', { ascending: false }).then(({ data, error }) => {
-      if (!error) {
-        setInvoices(data);
-        setFilteredInvoices(data);
-        allInvoices = data;
-      }
-    });
+    setCustomers(customersData || []);
+    setFilteredCustomers(customersData || []);
 
-    // Collect all unique products from ALL invoice items
-    const allProducts = [];
-    for (let invoice of allInvoices) {
-      await supabase.from('invoice_items').select('*').eq('invoice_id', invoice.id).then(({ data, error }) => {
-        if (!error && data) {
-          data.forEach(item => {
-            if (!allProducts.find(p => p.product_name === item.product_name)) {
-              allProducts.push(item);
-            }
-          });
-        }
-      });
-    }
-    setProducts(allProducts);
-    setFilteredProducts(allProducts);
+    // Fetch invoices WITH customer data in one query
+    const { data: invoicesData } = await supabase
+      .from('invoices')
+      .select(`
+      *,
+      customer:customers(name, phone_number)
+    `)
+      .order('bill_date', { ascending: false });
 
+    setInvoices(invoicesData || []);
+    setFilteredInvoices(invoicesData || []);
+
+    // Fetch ALL invoice items in ONE query (not in a loop!)
+    const { data: allItemsData } = await supabase
+      .from('invoice_items')
+      .select('*');
+
+    // Extract unique products from all items at once
+    const uniqueProducts = Array.from(
+      new Map(allItemsData.map(item => [item.product_name, item])).values()
+    );
+
+    setProducts(uniqueProducts);
+    setFilteredProducts(uniqueProducts);
+
+    setLoading(false);
+  };
+
+  // Remove the invoice items loop from fetchInitialData completely
+  // Only fetch when user clicks on a specific invoice
+
+  const handleInvoiceClick = async (invoice) => {
+    setSelectedInvoice(invoice);
+    setLoading(true);
+
+    const { data } = await supabase
+      .from('invoice_items')
+      .select('*')
+      .eq('invoice_id', invoice.id);
+
+    setInvoiceItems(data || []);
     setLoading(false);
   };
 
@@ -74,10 +87,6 @@ const Search = () => {
     fetchCustomerInvoices(customer.id);
   };
 
-  const handleInvoiceClick = (invoice) => {
-    setSelectedInvoice(invoice);
-    fetchInvoiceItems(invoice.id);
-  };
 
   const getUnpaidInvoices = () => {
     return filteredInvoices.filter(inv => inv.mode_of_payment === 'unpaid');
