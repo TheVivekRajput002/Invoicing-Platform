@@ -206,7 +206,7 @@ const EditInvoice = () => {
               <p className="text-gray-600 mt-1">Invoice #{invoice.invoice_number}</p>
             </div>
             <button
-              onClick={() => navigate('/search')}
+              onClick={() => navigate('/billing/invoice/search')}
               className="flex items-center gap-2 px-4 py-2 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <ArrowLeft size={20} />

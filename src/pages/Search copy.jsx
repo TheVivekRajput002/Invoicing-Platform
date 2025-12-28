@@ -411,7 +411,7 @@ const Search = () => {
                                   {invoice.mode_of_payment.toUpperCase()}
                                 </span>
                                 <button
-                                  onClick={() => navigate(`/invoice/edit/${invoice.id}`)}
+                                  onClick={() => navigate(`/billing/invoice/edit/${invoice.id}`)}
                                   className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
                                 >
                                   Edit
