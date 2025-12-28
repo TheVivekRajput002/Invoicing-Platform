@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Search as SearchIcon, User, FileText, ShoppingCart, AlertCircle, DollarSign, Calendar, Phone, Hash } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Search = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchType, setSearchType] = useState('all'); // all, customers, invoices, products
+  const [searchType, setSearchType] = useState('invoices'); // all, customers, invoices, products,unpaid
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -18,44 +20,52 @@ const Search = () => {
   const [invoiceItems, setInvoiceItems] = useState([]);
   const [stats, setStats] = useState({ total: 0, paid: 0, unpaid: 0 });
 
-
-
   useEffect(() => {
     fetchInitialData();
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 300); // Wait 300ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const fetchInitialData = async () => {
     setLoading(true);
 
-    // Fetch customers
+    // Fetch only recent 20 customers
     const { data: customersData } = await supabase
       .from('customers')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(20);  // ✅ Only top 20
 
     setCustomers(customersData || []);
     setFilteredCustomers(customersData || []);
 
-    // Fetch invoices WITH customer data in one query
+    // Fetch only recent 40 invoices WITH customer data
     const { data: invoicesData } = await supabase
       .from('invoices')
       .select(`
       *,
       customer:customers(name, phone_number)
     `)
-      .order('bill_date', { ascending: false });
+      .order('bill_date', { ascending: false })
+      .limit(40);  // ✅ Only top 40
 
     setInvoices(invoicesData || []);
     setFilteredInvoices(invoicesData || []);
 
-    // Fetch ALL invoice items in ONE query (not in a loop!)
+    // Fetch ALL invoice items in ONE query
     const { data: allItemsData } = await supabase
       .from('invoice_items')
       .select('*');
 
     // Extract unique products from all items at once
     const uniqueProducts = Array.from(
-      new Map(allItemsData.map(item => [item.product_name, item])).values()
+      new Map(allItemsData?.map(item => [item.product_name, item]) || []).values()
     );
 
     setProducts(uniqueProducts);
@@ -92,30 +102,54 @@ const Search = () => {
     return filteredInvoices.filter(inv => inv.mode_of_payment === 'unpaid');
   };
 
-  const handleSearch = (query) => {
+  const handleSearch = async (query) => {
     setSearchQuery(query);
+
+    // If search is empty, reload initial data (top 20/40)
+    if (!query.trim()) {
+      fetchInitialData();
+      return;
+    }
+
     const lowerQuery = query.toLowerCase();
+    setLoading(true);
 
-    // Filter customers
-    const filteredCust = customers.filter(c =>
-      c.name.toLowerCase().includes(lowerQuery) ||
-      c.phone_number.includes(query)
-    );
-    setFilteredCustomers(filteredCust);
+    try {
+      // Search ALL customers from database
+      const { data: searchedCustomers } = await supabase
+        .from('customers')
+        .select('*')
+        .or(`name.ilike.%${query}%,phone_number.ilike.%${query}%`)
+        .order('created_at', { ascending: false })
+        .limit(50);  // Limit search results to 50
 
-    // Filter invoices
-    const filteredInv = invoices.filter(inv =>
-      inv.invoice_number.toLowerCase().includes(lowerQuery) ||
-      inv.bill_date.includes(query)
-    );
-    setFilteredInvoices(filteredInv);
+      setFilteredCustomers(searchedCustomers || []);
 
-    // Filter products
-    const filteredProd = products.filter(p =>
-      p.product_name.toLowerCase().includes(lowerQuery) ||
-      p.hsn_code.includes(query)
-    );
-    setFilteredProducts(filteredProd);
+      // Search ALL invoices from database
+      const { data: searchedInvoices } = await supabase
+        .from('invoices')
+        .select(`
+        *,
+        customer:customers(name, phone_number)
+      `)
+        .or(`invoice_number.ilike.%${query}%,bill_date.ilike.%${query}%`)
+        .order('bill_date', { ascending: false })
+        .limit(100);  // Limit search results to 100
+
+      setFilteredInvoices(searchedInvoices || []);
+
+      // Search products from existing data (products are already loaded)
+      const filteredProd = products.filter(p =>
+        p.product_name.toLowerCase().includes(lowerQuery) ||
+        p.hsn_code?.includes(query)
+      );
+      setFilteredProducts(filteredProd);
+
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchCustomerInvoices = async (customerId) => {
@@ -159,9 +193,9 @@ const Search = () => {
               <SearchIcon className="absolute left-3 top-3 text-gray-400" size={20} />
               <input
                 type="text"
-                placeholder="Search customers, invoices, products..."
+                placeholder={loading ? "Searching..." : "Search customers, invoices, products..."}
                 value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -169,7 +203,7 @@ const Search = () => {
 
           {/* Search Type Filters */}
           <div className="flex gap-2">
-            {['all', 'customers', 'invoices', 'products', 'unpaid'].map(type => (
+            {['invoices', 'customers', , 'products', 'unpaid'].map(type => (
               <button
                 key={type}
                 onClick={() => setSearchType(type)}
@@ -186,105 +220,140 @@ const Search = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Results Panel */}
+
           <div className="lg:col-span-2 space-y-6">
-            {/* Customers */}
-            {(searchType === 'all' || searchType === 'customers') && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <User className="text-blue-600" size={24} />
-                  Customers ({filteredCustomers.length})
-                </h2>
-                <div className="space-y-3">
-                  {filteredCustomers.map(customer => (
-                    <div
-                      key={customer.id}
-                      onClick={() => handleCustomerClick(customer)}
-                      className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all cursor-pointer"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{customer.name}</h3>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Phone size={14} />
-                              {customer.phone_number}
-                            </span>
+            {/* ✅ LOADING STATE - Shows only in results area */}
+            {loading ? (
+              <div className="bg-white rounded-lg shadow-md p-12 text-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 text-lg">Searching...</p>
+              </div>
+            ) : (
+              <>
+                {/* Customers */}
+                {(searchType === 'customers') && (
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <User className="text-blue-600" size={24} />
+                      Customers ({filteredCustomers.length})
+                    </h2>
+                    <div className="space-y-3">
+                      {filteredCustomers.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">No customers found</p>
+                      ) : (
+                        filteredCustomers.map(customer => (
+                          <div
+                            key={customer.id}
+                            className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div
+                                onClick={() => handleCustomerClick(customer)}
+                                className="flex-1 cursor-pointer"
+                              >
+                                <h3 className="font-semibold text-gray-900">{customer.name}</h3>
+                                <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                                  <span className="flex items-center gap-1">
+                                    <Phone size={14} />
+                                    {customer.phone_number}
+                                  </span>
+                                </div>
+                              </div>
+                              {/* ✅ ADD EDIT BUTTON */}
+                              <button
+                                onClick={() => navigate(`/customer/edit/${customer.id}`)}
+                                className="ml-4 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                              >
+                                Edit
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        ))
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
 
-            {/* Invoices */}
-            {(searchType === 'all' || searchType === 'invoices' || searchType === 'unpaid') && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <FileText className="text-green-600" size={24} />
-                  {searchType === 'unpaid' ? 'Unpaid Invoices' : 'Invoices'}
-                  ({searchType === 'unpaid' ? getUnpaidInvoices().length : filteredInvoices.length})
-                </h2>
-                <div className="space-y-3">
-                  {(searchType === 'unpaid' ? getUnpaidInvoices() : filteredInvoices).map(invoice => (
-                    <div
-                      key={invoice.id}
-                      onClick={() => handleInvoiceClick(invoice)}
-                      className="p-4 border border-gray-200 rounded-lg hover:border-green-500 hover:shadow-md transition-all cursor-pointer"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{invoice.invoice_number}</h3>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Calendar size={14} />
-                              {invoice.bill_date}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <DollarSign size={14} />
-                              ₹{invoice.total_amount.toLocaleString()}
-                            </span>
+                {/* Invoices */}
+                {(searchType === 'invoices' || searchType === 'unpaid') && (
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <FileText className="text-green-600" size={24} />
+                      {searchType === 'unpaid' ? 'Unpaid Invoices' : 'Invoices'}
+                      ({searchType === 'unpaid' ? getUnpaidInvoices().length : filteredInvoices.length})
+                    </h2>
+                    <div className="space-y-3">
+                      {(searchType === 'unpaid' ? getUnpaidInvoices() : filteredInvoices).length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">No invoices found</p>
+                      ) : (
+                        (searchType === 'unpaid' ? getUnpaidInvoices() : filteredInvoices).map(invoice => (
+                          <div
+                            key={invoice.id}
+                            className="p-4 border border-gray-200 rounded-lg hover:border-green-500 hover:shadow-md transition-all"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div
+                                onClick={() => handleInvoiceClick(invoice)}
+                                className="flex-1 cursor-pointer"
+                              >
+                                <h3 className="font-semibold text-gray-900">{invoice.invoice_number}</h3>
+                                {/* ... rest of invoice details */}
+                              </div>
+                              {/* ✅ ADD EDIT BUTTON */}
+                              <div className="ml-4 flex flex-col gap-2">
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                  {invoice.mode_of_payment.toUpperCase()}
+                                </span>
+                                <button
+                                  onClick={() => navigate(`/invoice/edit/${invoice.id}`)}
+                                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                                >
+                                  Edit
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${(invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online') ? 'bg-green-100 text-green-800' :
-                          invoice.mode_of_payment === 'unpaid' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                          {invoice.mode_of_payment.toUpperCase()}
-                        </span>
-                      </div>
+                        ))
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
 
-            {/* Products */}
-            {(searchType === 'all' || searchType === 'products') && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <ShoppingCart className="text-purple-600" size={24} />
-                  Products ({filteredProducts.length})
-                </h2>
-                <div className="space-y-3">
-                  {filteredProducts.map((product, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 border border-gray-200 rounded-lg"
-                    >
-                      <h3 className="font-semibold text-gray-900">{product.product_name}</h3>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                        <span>HSN: {product.hsn_code}</span>
-                        <span>GST: {product.gst_percentage}%</span>
-                        <span>Rate: ₹{product.rate}</span>
-                      </div>
+                {/* Products */}
+                {(searchType === 'products') && (
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <ShoppingCart className="text-purple-600" size={24} />
+                      Products ({filteredProducts.length})
+                    </h2>
+                    <div className="space-y-3">
+                      {filteredProducts.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">No products found</p>
+                      ) : (
+                        filteredProducts.map((product, idx) => (
+                          <div
+                            key={idx}
+                            className="p-4 border border-gray-200 rounded-lg"
+                          >
+                            <h3 className="font-semibold text-gray-900">{product.product_name}</h3>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                              <span>HSN: {product.hsn_code}</span>
+                              <span>GST: {product.gst_percentage}%</span>
+                              <span>Rate: ₹{product.rate}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
+
 
           {/* Details Panel */}
           <div className="space-y-6">
@@ -377,15 +446,6 @@ const Search = () => {
             )}
           </div>
         </div>
-
-        {loading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading...</p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

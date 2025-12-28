@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import React from 'react'
 import { Link, Routes, Route } from 'react-router-dom'
-import Home from '../page/Home'
-import Data from '../page/Data'
-import Invoice from '../page/Invoice'
-import Billing from '../page/Billing'
-import Search from '../page/Search'
+import Home from '../pages/Home'
+import Data from '../pages/Data'
+import Invoice from '../pages/Invoice'
+import Billing from '../pages/Billing'
+import Search from '../pages/Search'
 
 
 const Header = () => {
@@ -154,13 +154,6 @@ const Header = () => {
                 </AnimatePresence>
             </nav>
 
-            <Routes>
-                <Route path='/' element={<Home />} />
-                <Route path='/billing' element={<Billing />} />
-                <Route path='/billing/invoice' element={<Invoice />} />
-                <Route path='/search' element={<Search />} />
-                <Route path='/data' element={<Data />} />
-            </Routes>
         </div>
     )
 }

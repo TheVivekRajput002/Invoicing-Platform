@@ -11,6 +11,7 @@ const InvoiceGenerator = () => {
     const [customerDetails, setCustomerDetails] = useState({
         customerName: '',
         customerAddress: '',
+        vehicle: '',
         phoneNumber: ''
     });
 
@@ -114,7 +115,8 @@ const InvoiceGenerator = () => {
                         {
                             name: customerDetails.customerName,
                             phone_number: customerDetails.phoneNumber,
-                            address: customerDetails.customerAddress
+                            address: customerDetails.customerAddress,
+                            vehicle: customerDetails.vehicle
                         }
                     ])
                     .select()
@@ -180,6 +182,7 @@ const InvoiceGenerator = () => {
             setCustomerDetails({
                 customerName: '',
                 customerAddress: '',
+                vehicle: '',
                 phoneNumber: ''
             });
             setProducts([{
@@ -259,6 +262,19 @@ const InvoiceGenerator = () => {
                                     onChange={(e) => handleCustomerChange('customerAddress', e.target.value)}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     placeholder="Enter customer address"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Vehicle
+                                </label>
+                                <input
+                                    type="text"
+                                    value={customerDetails.vehicle}
+                                    onChange={(e) => handleCustomerChange('vehicle', e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Enter vehicle number"
                                 />
                             </div>
 
