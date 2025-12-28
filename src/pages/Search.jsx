@@ -219,9 +219,112 @@ const Search = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Results Panel */}
 
-          <div className="lg:col-span-2 space-y-6">
+          {/* Details Panel */}
+          <div className="space-y-6 lg:order-2">
+            {selectedCustomer && searchType === 'customers' && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold mb-4">Customer Details</h2>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-600">Name</p>
+                    <p className="font-semibold">{selectedCustomer.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Phone</p>
+                    <p className="font-semibold">{selectedCustomer.phone_number}</p>
+                  </div>
+                </div>
+
+
+
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h3 className="font-semibold mb-3">Invoices ({customerInvoices.length})</h3>
+                  <div className="space-y-2">
+                    {customerInvoices.map(inv => (
+                      <div
+                        key={inv.id}
+                        onClick={() => handleInvoiceClick(inv)}
+                        className="p-3 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">{inv.invoice_number}</span>
+                          <span className={`text-xs px-2 py-1 rounded ${(inv.mode_of_payment === 'cash' || inv.mode_of_payment === 'online') ? 'bg-green-100 text-green-800' :
+                            inv.mode_of_payment === 'unpaid' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                            {inv.mode_of_payment}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">₹{inv.total_amount.toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedInvoice && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold mb-4">Invoice Details</h2>
+                <div className="space-y-3 mb-6">
+                  <div>
+                    <p className="text-sm text-gray-600">Invoice Number</p>
+                    <p className="font-semibold">{selectedInvoice.invoice_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Customer Name</p>
+                    <p className="font-semibold">{selectedInvoice.customer?.name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Date</p>
+                    <p className="font-semibold">{selectedInvoice.bill_date}</p>
+                  <div>
+                    <p className="text-sm text-gray-600">Time</p>
+                    <p className="font-semibold">
+                      {new Date(selectedInvoice.created_at).toLocaleString('en-IN', {
+                        timeStyle: 'short'
+                      })}
+                    </p>
+                  </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Total Amount</p>
+                    <p className="font-semibold">₹{selectedInvoice.total_amount.toLocaleString()}</p>
+                  </div>
+
+                </div>
+
+                {invoiceItems.length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <h3 className="font-semibold mb-3">Items</h3>
+                    <div className="space-y-3">
+                      {invoiceItems.map(item => (
+                        <div key={item.id} className="p-3 bg-gray-50 rounded">
+                          <p className="font-medium">{item.product_name}</p>
+                          <div className="mt-2 text-sm text-gray-600 space-y-1">
+                            <p>Qty: {item.quantity} × ₹{item.rate} = ₹{item.total_product.toLocaleString()}</p>
+                            <p>HSN: {item.hsn_code} | GST: {item.gst_percentage}%</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!selectedCustomer && !selectedInvoice && (
+              <div className="bg-blue-50 rounded-lg p-6 text-center">
+                <AlertCircle className="mx-auto text-blue-600 mb-3" size={48} />
+                <h3 className="font-semibold text-gray-900 mb-2">Select an Item</h3>
+                <p className="text-gray-600 text-sm">Click on a customer or invoice to view details</p>
+              </div>
+            )}
+          </div>
+
+          {/* Results Panel */}
+          <div className="lg:col-span-2 space-y-6 lg:order-1">
             {/* ✅ LOADING STATE - Shows only in results area */}
             {loading ? (
               <div className="bg-white rounded-lg shadow-md p-12 text-center">
@@ -355,96 +458,7 @@ const Search = () => {
           </div>
 
 
-          {/* Details Panel */}
-          <div className="space-y-6">
-            {selectedCustomer && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4">Customer Details</h2>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-600">Name</p>
-                    <p className="font-semibold">{selectedCustomer.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Phone</p>
-                    <p className="font-semibold">{selectedCustomer.phone_number}</p>
-                  </div>
-                </div>
 
-
-
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h3 className="font-semibold mb-3">Invoices ({customerInvoices.length})</h3>
-                  <div className="space-y-2">
-                    {customerInvoices.map(inv => (
-                      <div
-                        key={inv.id}
-                        onClick={() => handleInvoiceClick(inv)}
-                        className="p-3 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors"
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{inv.invoice_number}</span>
-                          <span className={`text-xs px-2 py-1 rounded ${(inv.mode_of_payment === 'cash' || inv.mode_of_payment === 'online') ? 'bg-green-100 text-green-800' :
-                            inv.mode_of_payment === 'unpaid' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                            {inv.mode_of_payment}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">₹{inv.total_amount.toLocaleString()}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectedInvoice && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4">Invoice Details</h2>
-                <div className="space-y-3 mb-6">
-                  <div>
-                    <p className="text-sm text-gray-600">Invoice Number</p>
-                    <p className="font-semibold">{selectedInvoice.invoice_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Date</p>
-                    <p className="font-semibold">{selectedInvoice.bill_date}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Total Amount</p>
-                    <p className="font-semibold">₹{selectedInvoice.total_amount.toLocaleString()}</p>
-                  </div>
-
-                </div>
-
-                {invoiceItems.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <h3 className="font-semibold mb-3">Items</h3>
-                    <div className="space-y-3">
-                      {invoiceItems.map(item => (
-                        <div key={item.id} className="p-3 bg-gray-50 rounded">
-                          <p className="font-medium">{item.product_name}</p>
-                          <div className="mt-2 text-sm text-gray-600 space-y-1">
-                            <p>Qty: {item.quantity} × ₹{item.rate} = ₹{item.total_product.toLocaleString()}</p>
-                            <p>HSN: {item.hsn_code} | GST: {item.gst_percentage}%</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {!selectedCustomer && !selectedInvoice && (
-              <div className="bg-blue-50 rounded-lg p-6 text-center">
-                <AlertCircle className="mx-auto text-blue-600 mb-3" size={48} />
-                <h3 className="font-semibold text-gray-900 mb-2">Select an Item</h3>
-                <p className="text-gray-600 text-sm">Click on a customer or invoice to view details</p>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
