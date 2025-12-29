@@ -104,7 +104,7 @@ const EditInvoice = () => {
 
   const addProduct = () => {
     const newProduct = {
-      id: 'new_' + Date.now(), // Temporary ID for new products
+      id: 'new_' + Date.now(),
       serialNumber: products.length + 1,
       productName: '',
       hsnCode: '',
@@ -112,7 +112,7 @@ const EditInvoice = () => {
       rate: 0,
       gstPercentage: 18,
       totalAmount: 0,
-      isNew: true // Flag to identify new products
+      isNew: true
     };
     setProducts([...products, newProduct]);
   };
@@ -155,7 +155,7 @@ const EditInvoice = () => {
 
       if (deleteError) throw deleteError;
 
-      // 3. Insert all products (both existing and new)
+      // 3. Insert all products
       const itemsToInsert = products.map((product, index) => ({
         invoice_id: id,
         serial_number: index + 1,
@@ -200,24 +200,13 @@ const EditInvoice = () => {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">Edit Invoice</h1>
-              <p className="text-gray-600 mt-1">Invoice #{invoice.invoice_number}</p>
-            </div>
-            <button
-              onClick={() => navigate('/billing/invoice/search')}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              <ArrowLeft size={20} />
-              Back to Search
-            </button>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-800">Edit Invoice</h1>
+          <p className="text-gray-600 mt-1">Invoice #{invoice.invoice_number}</p>
         </div>
 
         {/* Customer Info (Read-only) */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Customer Information</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Customer Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
             <div>
               <p className="text-sm text-gray-600">Customer Name</p>
@@ -235,8 +224,8 @@ const EditInvoice = () => {
 
         {/* Invoice Details */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Invoice Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Invoice Details</h2>
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Invoice Date
@@ -245,7 +234,7 @@ const EditInvoice = () => {
                 type="date"
                 value={invoice.bill_date}
                 onChange={(e) => setInvoice({...invoice, bill_date: e.target.value})}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div>
@@ -255,7 +244,7 @@ const EditInvoice = () => {
               <select
                 value={invoice.mode_of_payment}
                 onChange={(e) => setInvoice({...invoice, mode_of_payment: e.target.value})}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="unpaid">Unpaid</option>
                 <option value="cash">Cash</option>
@@ -265,11 +254,12 @@ const EditInvoice = () => {
           </div>
         </div>
 
-        {/* Products Table */}
+        {/* Products Section */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Products</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Product Details</h2>
 
-          <div className="overflow-x-auto">
+          {/* Desktop Table - Hidden on Mobile */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
@@ -347,6 +337,105 @@ const EditInvoice = () => {
             </table>
           </div>
 
+          {/* Mobile Cards - Hidden on Desktop */}
+          <div className="md:hidden space-y-4">
+            {products.map((product, index) => (
+              <div key={product.id} className="border-2 border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                {/* Header with Serial Number and Delete */}
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-700">Product #{index + 1}</h3>
+                  <button
+                    onClick={() => removeProduct(product.id)}
+                    className="text-red-600 hover:text-red-800 p-2"
+                    disabled={products.length === 1}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Product Name - Full Width */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Product Name
+                  </label>
+                  <input
+                    type="text"
+                    value={product.productName}
+                    onChange={(e) => handleProductChange(product.id, 'productName', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter product name"
+                  />
+                </div>
+
+                {/* HSN Code - Full Width */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    HSN Code
+                  </label>
+                  <input
+                    type="text"
+                    value={product.hsnCode}
+                    onChange={(e) => handleProductChange(product.id, 'hsnCode', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter HSN code"
+                  />
+                </div>
+
+                {/* Quantity and Rate - Side by Side */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Quantity
+                    </label>
+                    <input
+                      type="number"
+                      value={product.quantity}
+                      onChange={(e) => handleProductChange(product.id, 'quantity', parseFloat(e.target.value) || 0)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Rate (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={product.rate}
+                      onChange={(e) => handleProductChange(product.id, 'rate', parseFloat(e.target.value) || 0)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                {/* GST and Total - Side by Side */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      GST %
+                    </label>
+                    <input
+                      type="number"
+                      value={product.gstPercentage}
+                      onChange={(e) => handleProductChange(product.id, 'gstPercentage', parseFloat(e.target.value) || 0)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="18"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Total
+                    </label>
+                    <div className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg font-bold text-blue-600 text-lg">
+                      ₹{product.totalAmount.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <button
             onClick={addProduct}
             className="mt-4 flex items-center px-4 py-2 text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50"
@@ -358,8 +447,8 @@ const EditInvoice = () => {
         {/* Grand Total */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="flex justify-between items-center">
-            <span className="text-xl font-semibold text-gray-700">Grand Total:</span>
-            <span className="text-3xl font-bold text-blue-600">
+            <span className="text-lg font-semibold text-gray-700">Grand Total:</span>
+            <span className="text-2xl font-bold text-blue-600">
               ₹{calculateGrandTotal().toFixed(2)}
             </span>
           </div>
@@ -368,18 +457,17 @@ const EditInvoice = () => {
         {/* Action Buttons */}
         <div className="flex justify-between">
           <button
-            onClick={() => navigate('/search')}
-            className="flex items-center px-6 py-3 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50"
+            onClick={() => navigate('/billing/invoice/search')}
+            className="flex items-center px-6 py-2 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50"
           >
-            <ArrowLeft className="mr-2 w-5 h-5" />
-            Cancel
+            <ArrowLeft className="mr-2 w-4 h-4" /> Back
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            <Save className="mr-2 w-5 h-5" />
+            <Save className="mr-2 w-4 h-4" />
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>

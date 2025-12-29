@@ -106,6 +106,8 @@ const InvoiceSearch = () => {
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold text-gray-900 mb-6">Invoice Search</h1>
 
+
+
                 {/* Search Bar */}
                 <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                     <div className="relative mb-4">
@@ -130,14 +132,88 @@ const InvoiceSearch = () => {
                                 key={filter.id}
                                 onClick={() => handleFilterChange(filter.id)}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${filterType === filter.id
-                                        ? 'bg-green-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
                                 {filter.label}
                             </button>
                         ))}
                     </div>
+                </div>
+
+                {/* Invoice Details Panel */}
+                <div className="space-y-6">
+                    {selectedInvoice ? (
+                        <div className="bg-white rounded-lg shadow-md p-6">
+                            <h2 className="text-xl font-semibold mb-4">Invoice Details</h2>
+                            <div className="space-y-3 mb-6">
+                                <div>
+                                    <p className="text-sm text-gray-600">Invoice Number</p>
+                                    <p className="font-semibold">{selectedInvoice.invoice_number}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Customer Name</p>
+                                    <p className="font-semibold">{selectedInvoice.customer?.name || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Phone</p>
+                                    <p className="font-semibold">{selectedInvoice.customer?.phone_number || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Date</p>
+                                    <p className="font-semibold">{selectedInvoice.bill_date}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Time</p>
+                                    <p className="font-semibold">
+                                        {new Date(selectedInvoice.created_at).toLocaleString('en-IN', {
+                                            timeStyle: 'short'
+                                        })}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Payment Mode</p>
+                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mt-1 ${selectedInvoice.mode_of_payment === 'cash' || selectedInvoice.mode_of_payment === 'online'
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                        {selectedInvoice.mode_of_payment.toUpperCase()}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Total Amount</p>
+                                    <p className="font-bold text-lg text-green-600">
+                                        ₹{parseFloat(selectedInvoice.total_amount).toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Invoice Items */}
+                            {invoiceItems.length > 0 && (
+                                <div className="border-t border-gray-200 pt-4">
+                                    <h3 className="font-semibold mb-3">Items ({invoiceItems.length})</h3>
+                                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                                        {invoiceItems.map(item => (
+                                            <div key={item.id} className="p-3 bg-gray-50 rounded">
+                                                <p className="font-medium">{item.product_name}</p>
+                                                <div className="mt-2 text-sm text-gray-600 space-y-1">
+                                                    <p>Qty: {item.quantity} × ₹{parseFloat(item.rate).toLocaleString()} = ₹{parseFloat(item.total_product).toLocaleString()}</p>
+                                                    <p>HSN: {item.hsn_code} | GST: {item.gst_percentage}%</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="bg-green-50 rounded-lg p-6 text-center">
+                            <AlertCircle className="mx-auto text-green-600 mb-3" size={48} />
+                            <h3 className="font-semibold text-gray-900 mb-2">Select an Invoice</h3>
+                            <p className="text-gray-600 text-sm">Click on an invoice to view details and items</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -187,8 +263,8 @@ const InvoiceSearch = () => {
                                                     </div>
                                                     <div className="ml-4 flex flex-col gap-2">
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : 'bg-yellow-100 text-yellow-800'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
                                                             }`}>
                                                             {invoice.mode_of_payment.toUpperCase()}
                                                         </span>
@@ -208,79 +284,7 @@ const InvoiceSearch = () => {
                         )}
                     </div>
 
-                    {/* Invoice Details Panel */}
-                    <div className="space-y-6">
-                        {selectedInvoice ? (
-                            <div className="bg-white rounded-lg shadow-md p-6">
-                                <h2 className="text-xl font-semibold mb-4">Invoice Details</h2>
-                                <div className="space-y-3 mb-6">
-                                    <div>
-                                        <p className="text-sm text-gray-600">Invoice Number</p>
-                                        <p className="font-semibold">{selectedInvoice.invoice_number}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Customer Name</p>
-                                        <p className="font-semibold">{selectedInvoice.customer?.name || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Phone</p>
-                                        <p className="font-semibold">{selectedInvoice.customer?.phone_number || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Date</p>
-                                        <p className="font-semibold">{selectedInvoice.bill_date}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Time</p>
-                                        <p className="font-semibold">
-                                            {new Date(selectedInvoice.created_at).toLocaleString('en-IN', {
-                                                timeStyle: 'short'
-                                            })}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Payment Mode</p>
-                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mt-1 ${selectedInvoice.mode_of_payment === 'cash' || selectedInvoice.mode_of_payment === 'online'
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-yellow-100 text-yellow-800'
-                                            }`}>
-                                            {selectedInvoice.mode_of_payment.toUpperCase()}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Total Amount</p>
-                                        <p className="font-bold text-lg text-green-600">
-                                            ₹{parseFloat(selectedInvoice.total_amount).toLocaleString()}
-                                        </p>
-                                    </div>
-                                </div>
 
-                                {/* Invoice Items */}
-                                {invoiceItems.length > 0 && (
-                                    <div className="border-t border-gray-200 pt-4">
-                                        <h3 className="font-semibold mb-3">Items ({invoiceItems.length})</h3>
-                                        <div className="space-y-3 max-h-96 overflow-y-auto">
-                                            {invoiceItems.map(item => (
-                                                <div key={item.id} className="p-3 bg-gray-50 rounded">
-                                                    <p className="font-medium">{item.product_name}</p>
-                                                    <div className="mt-2 text-sm text-gray-600 space-y-1">
-                                                        <p>Qty: {item.quantity} × ₹{parseFloat(item.rate).toLocaleString()} = ₹{parseFloat(item.total_product).toLocaleString()}</p>
-                                                        <p>HSN: {item.hsn_code} | GST: {item.gst_percentage}%</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="bg-green-50 rounded-lg p-6 text-center">
-                                <AlertCircle className="mx-auto text-green-600 mb-3" size={48} />
-                                <h3 className="font-semibold text-gray-900 mb-2">Select an Invoice</h3>
-                                <p className="text-gray-600 text-sm">Click on an invoice to view details and items</p>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
         </div>
