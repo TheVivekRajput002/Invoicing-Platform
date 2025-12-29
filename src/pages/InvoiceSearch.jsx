@@ -405,7 +405,7 @@ const InvoiceSearch = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* Invoice Details Panel */}
-                    <div className="space-y-6 lg:col-span-2">
+                    {/* <div className="space-y-6 lg:col-span-2">
                         {selectedInvoice ? (
                             <InvoiceDetailsView
                                 invoice={selectedInvoice}
@@ -419,10 +419,10 @@ const InvoiceSearch = () => {
                                 <p className="text-gray-600 text-sm">Click on an invoice to view details and items</p>
                             </div>
                         )}
-                    </div>
+                    </div> */}
 
                     {/* Invoice List */}
-                    <div className="lg:col-span-1">
+                    <div className="lg:col-span-3">
                         {loading ? (
                             <div className="bg-white rounded-lg shadow-md p-12 text-center">
                                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mx-auto mb-4"></div>
@@ -445,7 +445,7 @@ const InvoiceSearch = () => {
                                                     ? 'border-green-500 bg-green-50'
                                                     : 'border-gray-200 hover:border-green-500'
                                                     }`}
-                                                onClick={() => handleInvoiceClick(invoice)}
+                                                onClick={() => navigate(`/billing/invoice/${invoice.id}`)}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex-1">

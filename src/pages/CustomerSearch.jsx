@@ -209,7 +209,7 @@ const CustomerSearch = () => {
                                         {customerInvoices.map(inv => (
                                             <div
                                                 key={inv.id}
-                                                onClick={() => navigate(`/invoice/edit/${inv.id}`)}
+                                                onClick={() => navigate(`/billing/invoice/${inv.id}`)}
                                                 className="p-3 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors"
                                             >
                                                 <div className="flex justify-between items-center">

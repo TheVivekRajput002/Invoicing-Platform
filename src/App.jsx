@@ -6,7 +6,7 @@ import NewInvoice from './pages/NewInvoice';
 import Data from './pages/Data';
 import EditCustomer from './pages/EditCustomer';
 import Header from './components/Header';
-import EditInvoice from './pages/EditInvoice';
+import ViewEditInvoice from './pages/ViewEditInvoice';
 import CustomerSearch from './pages/CustomerSearch';
 import InvoiceSearch from './pages/InvoiceSearch';
 import ProductSearch from './pages/ProductSearch';
@@ -34,7 +34,7 @@ function App() {
             <Route path='/billing/invoice/new' element={<NewInvoice />} />
             {/* <Route path='/customer' element={<Customer />} /> */}
 
-            <Route path='/billing/invoice/edit/:id' element={<EditInvoice />} />
+            <Route path='/billing/invoice/:id' element={<ViewEditInvoice />} />
             <Route path='/customer/edit/:id' element={<EditCustomer />} />
 
           </Routes>
