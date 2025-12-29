@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Search as SearchIcon, FileText, AlertCircle, Calendar, DollarSign } from 'lucide-react';
+import { Search as SearchIcon, FileText, AlertCircle, Calendar, DollarSign, X, Tag, User, CreditCard, TrendingUp, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import InvoiceDetailsView from '../components/InvoiceDetailsView';
 
 const InvoiceSearch = () => {
     const navigate = useNavigate();
@@ -11,7 +12,25 @@ const InvoiceSearch = () => {
     const [loading, setLoading] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [invoiceItems, setInvoiceItems] = useState([]);
-    const [filterType, setFilterType] = useState('all'); // all, unpaid, paid
+
+    // Active filters
+    const [activeFilters, setActiveFilters] = useState({
+        paymentStatus: null, // 'paid', 'unpaid', or null
+        customerName: '',
+        dateFrom: '',
+        dateTo: '',
+        minAmount: '',
+        maxAmount: '',
+        paymentMethod: null // 'cash', 'online', or null
+    });
+
+    // Statistics
+    const [stats, setStats] = useState({
+        totalAmount: 0,
+        paidAmount: 0,
+        unpaidAmount: 0,
+        count: 0
+    });
 
     useEffect(() => {
         fetchInitialData();
@@ -19,11 +38,11 @@ const InvoiceSearch = () => {
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            handleSearch(searchQuery);
+            applyFilters();
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [searchQuery, filterType]);
+    }, [searchQuery, activeFilters, invoices]);
 
     const fetchInitialData = async () => {
         setLoading(true);
@@ -31,56 +50,86 @@ const InvoiceSearch = () => {
         const { data: invoicesData } = await supabase
             .from('invoices')
             .select(`
-        *,
-        customer:customers(name, phone_number)
-      `)
+                *,
+                customer:customers(name, phone_number, address)
+            `)
             .order('bill_date', { ascending: false })
-            .limit(40);
+            .limit(100);
 
         setInvoices(invoicesData || []);
-        applyFilter(invoicesData || []);
         setLoading(false);
     };
 
-    const applyFilter = (invoicesList) => {
-        let filtered = invoicesList;
+    const applyFilters = () => {
+        let filtered = [...invoices];
 
-        if (filterType === 'unpaid') {
-            filtered = invoicesList.filter(inv => inv.mode_of_payment === 'unpaid');
-        } else if (filterType === 'paid') {
-            filtered = invoicesList.filter(inv => inv.mode_of_payment === 'cash' || inv.mode_of_payment === 'online');
+        // Text search filter
+        if (searchQuery.trim()) {
+            filtered = filtered.filter(inv =>
+                inv.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                inv.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                inv.bill_date.includes(searchQuery)
+            );
         }
+
+        // Payment status filter
+        if (activeFilters.paymentStatus === 'paid') {
+            filtered = filtered.filter(inv =>
+                inv.mode_of_payment === 'cash' || inv.mode_of_payment === 'online'
+            );
+        } else if (activeFilters.paymentStatus === 'unpaid') {
+            filtered = filtered.filter(inv => inv.mode_of_payment === 'unpaid');
+        }
+
+        // Customer name filter
+        if (activeFilters.customerName.trim()) {
+            filtered = filtered.filter(inv =>
+                inv.customer?.name?.toLowerCase().includes(activeFilters.customerName.toLowerCase())
+            );
+        }
+
+        // Date range filter
+        if (activeFilters.dateFrom) {
+            filtered = filtered.filter(inv => inv.bill_date >= activeFilters.dateFrom);
+        }
+        if (activeFilters.dateTo) {
+            filtered = filtered.filter(inv => inv.bill_date <= activeFilters.dateTo);
+        }
+
+        // Amount range filter
+        if (activeFilters.minAmount) {
+            filtered = filtered.filter(inv =>
+                parseFloat(inv.total_amount) >= parseFloat(activeFilters.minAmount)
+            );
+        }
+        if (activeFilters.maxAmount) {
+            filtered = filtered.filter(inv =>
+                parseFloat(inv.total_amount) <= parseFloat(activeFilters.maxAmount)
+            );
+        }
+
+        // Payment method filter
+        if (activeFilters.paymentMethod) {
+            filtered = filtered.filter(inv => inv.mode_of_payment === activeFilters.paymentMethod);
+        }
+
+        // Calculate statistics
+        const totalAmount = filtered.reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0);
+        const paidAmount = filtered
+            .filter(inv => inv.mode_of_payment === 'cash' || inv.mode_of_payment === 'online')
+            .reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0);
+        const unpaidAmount = filtered
+            .filter(inv => inv.mode_of_payment === 'unpaid')
+            .reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0);
+
+        setStats({
+            totalAmount,
+            paidAmount,
+            unpaidAmount,
+            count: filtered.length
+        });
 
         setFilteredInvoices(filtered);
-    };
-
-    const handleSearch = async (query) => {
-        setSearchQuery(query);
-
-        if (!query.trim()) {
-            applyFilter(invoices);
-            return;
-        }
-
-        setLoading(true);
-
-        try {
-            const { data: searchedInvoices } = await supabase
-                .from('invoices')
-                .select(`
-          *,
-          customer:customers(name, phone_number)
-        `)
-                .or(`invoice_number.ilike.%${query}%,bill_date.ilike.%${query}%`)
-                .order('bill_date', { ascending: false })
-                .limit(100);
-
-            applyFilter(searchedInvoices || []);
-        } catch (error) {
-            console.error('Search error:', error);
-        } finally {
-            setLoading(false);
-        }
     };
 
     const handleInvoiceClick = async (invoice) => {
@@ -96,133 +145,288 @@ const InvoiceSearch = () => {
         setLoading(false);
     };
 
-    const handleFilterChange = (type) => {
-        setFilterType(type);
-        applyFilter(invoices);
+    const updateFilter = (key, value) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
     };
+
+    const removeFilter = (key) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [key]: key === 'paymentStatus' || key === 'paymentMethod' ? null : ''
+        }));
+    };
+
+    const clearAllFilters = () => {
+        setActiveFilters({
+            paymentStatus: null,
+            customerName: '',
+            dateFrom: '',
+            dateTo: '',
+            minAmount: '',
+            maxAmount: '',
+            paymentMethod: null
+        });
+        setSearchQuery('');
+    };
+
+    const getActiveFilterTags = () => {
+        const tags = [];
+
+        if (activeFilters.paymentStatus) {
+            tags.push({
+                key: 'paymentStatus',
+                label: `Status: ${activeFilters.paymentStatus.toUpperCase()}`,
+                color: activeFilters.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+            });
+        }
+
+        if (activeFilters.customerName) {
+            tags.push({
+                key: 'customerName',
+                label: `Customer: ${activeFilters.customerName}`,
+                color: 'bg-blue-100 text-blue-800'
+            });
+        }
+
+        if (activeFilters.dateFrom || activeFilters.dateTo) {
+            const dateLabel = activeFilters.dateFrom && activeFilters.dateTo
+                ? `${activeFilters.dateFrom} to ${activeFilters.dateTo}`
+                : activeFilters.dateFrom
+                    ? `From: ${activeFilters.dateFrom}`
+                    : `To: ${activeFilters.dateTo}`;
+            tags.push({
+                key: 'date',
+                label: `Date: ${dateLabel}`,
+                color: 'bg-purple-100 text-purple-800'
+            });
+        }
+
+        if (activeFilters.minAmount || activeFilters.maxAmount) {
+            const amountLabel = activeFilters.minAmount && activeFilters.maxAmount
+                ? `₹${activeFilters.minAmount} - ₹${activeFilters.maxAmount}`
+                : activeFilters.minAmount
+                    ? `Min: ₹${activeFilters.minAmount}`
+                    : `Max: ₹${activeFilters.maxAmount}`;
+            tags.push({
+                key: 'amount',
+                label: `Amount: ${amountLabel}`,
+                color: 'bg-orange-100 text-orange-800'
+            });
+        }
+
+        if (activeFilters.paymentMethod) {
+            tags.push({
+                key: 'paymentMethod',
+                label: `Method: ${activeFilters.paymentMethod.toUpperCase()}`,
+                color: 'bg-indigo-100 text-indigo-800'
+            });
+        }
+
+        return tags;
+    };
+
+    const activeTags = getActiveFilterTags();
 
     return (
         <div className="bg-gray-50 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold text-gray-900 mb-6">Invoice Search</h1>
 
-
-
-                {/* Search Bar */}
+                {/* Search Bar and Filters */}
                 <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                    {/* Main Search */}
                     <div className="relative mb-4">
                         <SearchIcon className="absolute left-3 top-3 text-gray-400" size={20} />
                         <input
                             type="text"
-                            placeholder="Search by invoice number or date..."
+                            placeholder="Search by invoice number, customer name, or date..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         />
                     </div>
 
-                    {/* Filter Buttons */}
-                    <div className="flex gap-2">
-                        {[
-                            { id: 'all', label: 'All' },
-                            { id: 'unpaid', label: 'Unpaid' },
-                            { id: 'paid', label: 'Paid' }
-                        ].map(filter => (
-                            <button
-                                key={filter.id}
-                                onClick={() => handleFilterChange(filter.id)}
-                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${filterType === filter.id
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
+                    {/* Filter Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        {/* Payment Status Filter */}
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                <Tag size={16} />
+                                Payment Status
+                            </label>
+                            <select
+                                value={activeFilters.paymentStatus || ''}
+                                onChange={(e) => updateFilter('paymentStatus', e.target.value || null)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                             >
-                                {filter.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Invoice Details Panel */}
-                <div className="space-y-6">
-                    {selectedInvoice ? (
-                        <div className="bg-white rounded-lg shadow-md p-6">
-                            <h2 className="text-xl font-semibold mb-4">Invoice Details</h2>
-                            <div className="space-y-3 mb-6">
-                                <div>
-                                    <p className="text-sm text-gray-600">Invoice Number</p>
-                                    <p className="font-semibold">{selectedInvoice.invoice_number}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Customer Name</p>
-                                    <p className="font-semibold">{selectedInvoice.customer?.name || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Phone</p>
-                                    <p className="font-semibold">{selectedInvoice.customer?.phone_number || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Date</p>
-                                    <p className="font-semibold">{selectedInvoice.bill_date}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Time</p>
-                                    <p className="font-semibold">
-                                        {new Date(selectedInvoice.created_at).toLocaleString('en-IN', {
-                                            timeStyle: 'short'
-                                        })}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Payment Mode</p>
-                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mt-1 ${selectedInvoice.mode_of_payment === 'cash' || selectedInvoice.mode_of_payment === 'online'
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-yellow-100 text-yellow-800'
-                                        }`}>
-                                        {selectedInvoice.mode_of_payment.toUpperCase()}
-                                    </span>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Total Amount</p>
-                                    <p className="font-bold text-lg text-green-600">
-                                        ₹{parseFloat(selectedInvoice.total_amount).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Invoice Items */}
-                            {invoiceItems.length > 0 && (
-                                <div className="border-t border-gray-200 pt-4">
-                                    <h3 className="font-semibold mb-3">Items ({invoiceItems.length})</h3>
-                                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                                        {invoiceItems.map(item => (
-                                            <div key={item.id} className="p-3 bg-gray-50 rounded">
-                                                <p className="font-medium">{item.product_name}</p>
-                                                <div className="mt-2 text-sm text-gray-600 space-y-1">
-                                                    <p>Qty: {item.quantity} × ₹{parseFloat(item.rate).toLocaleString()} = ₹{parseFloat(item.total_product).toLocaleString()}</p>
-                                                    <p>HSN: {item.hsn_code} | GST: {item.gst_percentage}%</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                                <option value="">All</option>
+                                <option value="paid">Paid</option>
+                                <option value="unpaid">Unpaid</option>
+                            </select>
                         </div>
-                    ) : (
-                        <div className="bg-green-50 rounded-lg p-6 text-center">
-                            <AlertCircle className="mx-auto text-green-600 mb-3" size={48} />
-                            <h3 className="font-semibold text-gray-900 mb-2">Select an Invoice</h3>
-                            <p className="text-gray-600 text-sm">Click on an invoice to view details and items</p>
+
+                        {/* Customer Name Filter */}
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                <User size={16} />
+                                Customer Name
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Enter customer name"
+                                value={activeFilters.customerName}
+                                onChange={(e) => updateFilter('customerName', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
+
+                        {/* Payment Method Filter */}
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                <CreditCard size={16} />
+                                Payment Method
+                            </label>
+                            <select
+                                value={activeFilters.paymentMethod || ''}
+                                onChange={(e) => updateFilter('paymentMethod', e.target.value || null)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                            >
+                                <option value="">All</option>
+                                <option value="cash">Cash</option>
+                                <option value="online">Online</option>
+                                <option value="unpaid">Unpaid</option>
+                            </select>
+                        </div>
+
+                        {/* Date From */}
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                <Calendar size={16} />
+                                Date From
+                            </label>
+                            <input
+                                type="date"
+                                value={activeFilters.dateFrom}
+                                onChange={(e) => updateFilter('dateFrom', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
+
+                        {/* Date To */}
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                <Calendar size={16} />
+                                Date To
+                            </label>
+                            <input
+                                type="date"
+                                value={activeFilters.dateTo}
+                                onChange={(e) => updateFilter('dateTo', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
+
+                        {/* Amount Range - Min */}
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                <DollarSign size={16} />
+                                Min Amount
+                            </label>
+                            <input
+                                type="number"
+                                placeholder="Min ₹"
+                                value={activeFilters.minAmount}
+                                onChange={(e) => updateFilter('minAmount', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
+
+                        {/* Amount Range - Max */}
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                <DollarSign size={16} />
+                                Max Amount
+                            </label>
+                            <input
+                                type="number"
+                                placeholder="Max ₹"
+                                value={activeFilters.maxAmount}
+                                onChange={(e) => updateFilter('maxAmount', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Active Filter Tags */}
+                    {activeTags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 items-center pt-4 border-t border-gray-200">
+                            <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+                                <Filter size={16} />
+                                Active Filters:
+                            </span>
+                            {activeTags.map(tag => (
+                                <span
+                                    key={tag.key}
+                                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${tag.color}`}
+                                >
+                                    {tag.label}
+                                    <button
+                                        onClick={() => {
+                                            if (tag.key === 'date') {
+                                                removeFilter('dateFrom');
+                                                removeFilter('dateTo');
+                                            } else if (tag.key === 'amount') {
+                                                removeFilter('minAmount');
+                                                removeFilter('maxAmount');
+                                            } else {
+                                                removeFilter(tag.key);
+                                            }
+                                        }}
+                                        className="hover:bg-black hover:bg-opacity-10 rounded-full p-0.5"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </span>
+                            ))}
+                            <button
+                                onClick={clearAllFilters}
+                                className="text-xs text-red-600 hover:text-red-800 font-semibold underline"
+                            >
+                                Clear All
+                            </button>
                         </div>
                     )}
                 </div>
 
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    {/* Invoice Details Panel */}
+                    <div className="space-y-6 lg:col-span-2">
+                        {selectedInvoice ? (
+                            <InvoiceDetailsView
+                                invoice={selectedInvoice}
+                                invoiceItems={invoiceItems}
+                                customer={selectedInvoice.customer}
+                            />
+                        ) : (
+                            <div className="bg-green-50 rounded-lg p-6 text-center">
+                                <AlertCircle className="mx-auto text-green-600 mb-3" size={48} />
+                                <h3 className="font-semibold text-gray-900 mb-2">Select an Invoice</h3>
+                                <p className="text-gray-600 text-sm">Click on an invoice to view details and items</p>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Invoice List */}
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-1">
                         {loading ? (
                             <div className="bg-white rounded-lg shadow-md p-12 text-center">
                                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mx-auto mb-4"></div>
-                                <p className="text-gray-600 text-lg">Searching...</p>
+                                <p className="text-gray-600 text-lg">Loading...</p>
                             </div>
                         ) : (
                             <div className="bg-white rounded-lg shadow-md p-6">
@@ -230,51 +434,45 @@ const InvoiceSearch = () => {
                                     <FileText className="text-green-600" size={24} />
                                     Invoices ({filteredInvoices.length})
                                 </h2>
-                                <div className="space-y-3">
+                                <div className="space-y-3 max-h-[600px] overflow-y-auto">
                                     {filteredInvoices.length === 0 ? (
                                         <p className="text-gray-500 text-center py-8">No invoices found</p>
                                     ) : (
                                         filteredInvoices.map(invoice => (
                                             <div
                                                 key={invoice.id}
-                                                className="p-4 border border-gray-200 rounded-lg hover:border-green-500 hover:shadow-md transition-all"
+                                                className={`p-4 border-2 rounded-lg hover:shadow-md transition-all cursor-pointer ${selectedInvoice?.id === invoice.id
+                                                    ? 'border-green-500 bg-green-50'
+                                                    : 'border-gray-200 hover:border-green-500'
+                                                    }`}
+                                                onClick={() => handleInvoiceClick(invoice)}
                                             >
                                                 <div className="flex justify-between items-start">
-                                                    <div
-                                                        onClick={() => handleInvoiceClick(invoice)}
-                                                        className="flex-1 cursor-pointer"
-                                                    >
+                                                    <div className="flex-1">
                                                         <h3 className="font-semibold text-gray-900">{invoice.invoice_number}</h3>
                                                         <div className="mt-2 space-y-1">
                                                             <p className="text-sm text-gray-600">
-                                                                Customer: {invoice.customer?.name || 'N/A'}
+                                                                <User size={14} className="inline mr-1" />
+                                                                {invoice.customer?.name || 'N/A'}
                                                             </p>
                                                             <div className="flex items-center gap-4 text-sm text-gray-600">
                                                                 <span className="flex items-center gap-1">
                                                                     <Calendar size={14} />
                                                                     {invoice.bill_date}
                                                                 </span>
-                                                                <span className="flex items-center gap-1">
+                                                                <span className="flex items-center gap-1 font-semibold">
                                                                     <DollarSign size={14} />
                                                                     ₹{parseFloat(invoice.total_amount).toLocaleString()}
                                                                 </span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="ml-4 flex flex-col gap-2">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : 'bg-yellow-100 text-yellow-800'
-                                                            }`}>
-                                                            {invoice.mode_of_payment.toUpperCase()}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => navigate(`/billing/invoice/edit/${invoice.id}`)}
-                                                            className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                    </div>
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-yellow-100 text-yellow-800'
+                                                        }`}>
+                                                        {invoice.mode_of_payment.toUpperCase()}
+                                                    </span>
                                                 </div>
                                             </div>
                                         ))
@@ -283,8 +481,6 @@ const InvoiceSearch = () => {
                             </div>
                         )}
                     </div>
-
-
                 </div>
             </div>
         </div>
