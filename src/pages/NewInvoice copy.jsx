@@ -1,14 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 const InvoiceGenerator = () => {
-
-
     const [step, setStep] = useState(1);
     const [paymentMode, setPaymentMode] = useState('unpaid');
     const [gstin, setGstin] = useState('');
+    const [searchingCustomer, setSearchingCustomer] = useState(false);
+    const [customerFound, setCustomerFound] = useState(false);
 
     const [customerDetails, setCustomerDetails] = useState({
         customerName: '',
@@ -32,6 +31,53 @@ const InvoiceGenerator = () => {
 
     const [saving, setSaving] = useState(false);
 
+    // Auto-search customer by phone number
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (customerDetails.phoneNumber && customerDetails.phoneNumber.length >= 10) {
+                searchCustomerByPhone(customerDetails.phoneNumber);
+            } else {
+                setCustomerFound(false);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [customerDetails.phoneNumber]);
+
+    const searchCustomerByPhone = async (phoneNumber) => {
+        setSearchingCustomer(true);
+        setCustomerFound(false);
+
+        try {
+            const { data, error } = await supabase
+                .from('customers')
+                .select('*')
+                .eq('phone_number', phoneNumber)
+                .maybeSingle();
+
+            if (!error && data) {
+                // Customer found - auto-fill details
+                setCustomerDetails({
+                    customerName: data.name || '',
+                    customerAddress: data.address || '',
+                    vehicle: data.vehicle || '',
+                    phoneNumber: data.phone_number
+                });
+                setCustomerFound(true);
+                console.log('Customer found and auto-filled:', data);
+            } else {
+                // Customer not found
+                setCustomerFound(false);
+                console.log('No customer found with this phone number');
+            }
+        } catch (error) {
+            console.error('Error searching customer:', error);
+            setCustomerFound(false);
+        } finally {
+            setSearchingCustomer(false);
+        }
+    };
+
     const calculateProductTotal = (quantity, rate, gstPercentage) => {
         const baseAmount = quantity * rate;
         const gstAmount = (baseAmount * gstPercentage) / 100;
@@ -43,6 +89,11 @@ const InvoiceGenerator = () => {
             ...prev,
             [field]: value
         }));
+
+        // Reset customer found status if user manually changes details (except phone)
+        if (field !== 'phoneNumber' && customerFound) {
+            setCustomerFound(false);
+        }
     };
 
     const handleProductChange = (id, field, value) => {
@@ -62,7 +113,6 @@ const InvoiceGenerator = () => {
             }
             return product;
         }));
-
     };
 
     const addProduct = () => {
@@ -93,7 +143,7 @@ const InvoiceGenerator = () => {
         setSaving(true);
 
         try {
-            let customerId;  // ✅ ADD THIS LINE - Declare the variable!
+            let customerId;
 
             // Check if customer exists
             const { data: existingCustomers, error: fetchError } = await supabase
@@ -133,7 +183,7 @@ const InvoiceGenerator = () => {
                 console.log('Created new customer:', customerId);
             }
 
-            // Validate customerId before using it
+            // Validate customerId
             if (!customerId) {
                 throw new Error('Failed to get or create customer ID');
             }
@@ -201,6 +251,7 @@ const InvoiceGenerator = () => {
             }]);
             setPaymentMode('unpaid');
             setGstin('');
+            setCustomerFound(false);
 
         } catch (error) {
             console.error('Error saving invoice:', error);
@@ -216,357 +267,354 @@ const InvoiceGenerator = () => {
     };
 
     return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
-                <div className="max-w-6xl mx-auto">
-                    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                        <h1 className="text-3xl font-bold text-gray-800">Invoice Generator</h1>
-                        <div className="flex items-center mt-4">
-                            <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
-                                    1
-                                </div>
-                                <span className="ml-2 font-medium">Customer Details</span>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
+            <div className="max-w-6xl mx-auto">
+                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                    <h1 className="text-3xl font-bold text-gray-800">Invoice Generator</h1>
+                    <div className="flex items-center mt-4">
+                        <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
+                                1
                             </div>
-                            <div className="flex-1 h-1 mx-4 bg-gray-300">
-                                <div className={`h-full ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'} transition-all`} />
+                            <span className="ml-2 font-medium">Customer Details</span>
+                        </div>
+                        <div className="flex-1 h-1 mx-4 bg-gray-300">
+                            <div className={`h-full ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'} transition-all`} />
+                        </div>
+                        <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
+                                2
                             </div>
-                            <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
-                                    2
-                                </div>
-                                <span className="ml-2 font-medium">Products</span>
-                            </div>
+                            <span className="ml-2 font-medium">Products</span>
                         </div>
                     </div>
+                </div>
 
-                    {step === 1 && (
-                        <div className="bg-white rounded-lg shadow-lg p-6">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Customer Details</h2>
+                {step === 1 && (
+                    <div className="bg-white rounded-lg shadow-lg p-6">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">Customer Details</h2>
 
-                            <div className="space-y-4">
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Customer Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={customerDetails.customerName}
-                                        onChange={(e) => handleCustomerChange('customerName', e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Enter customer name"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Customer Address
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={customerDetails.customerAddress}
-                                        onChange={(e) => handleCustomerChange('customerAddress', e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Enter customer address"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Vehicle
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={customerDetails.vehicle}
-                                        onChange={(e) => handleCustomerChange('vehicle', e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Enter vehicle number"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Phone Number *
-                                    </label>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Phone Number *
+                                </label>
+                                <div className="relative">
                                     <input
                                         type="tel"
                                         value={customerDetails.phoneNumber}
                                         onChange={(e) => handleCustomerChange('phoneNumber', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Enter phone number"
+                                        placeholder="Enter phone number (10 digits)"
+                                        maxLength="10"
                                     />
+                                    {searchingCustomer && (
+                                        <div className="absolute right-3 top-3">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                        </div>
+                                    )}
+                                    {customerFound && !searchingCustomer && (
+                                        <div className="absolute right-3 top-3">
+                                            <CheckCircle className="text-green-600" size={20} />
+                                        </div>
+                                    )}
                                 </div>
-
-
+                                {customerFound && (
+                                    <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                                        <CheckCircle size={14} />
+                                        Customer found! Details auto-filled.
+                                    </p>
+                                )}
+                                {!searchingCustomer && !customerFound && customerDetails.phoneNumber.length >= 10 && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        New customer - please fill in details below
+                                    </p>
+                                )}
                             </div>
 
-                            <div className="mt-6 flex justify-end">
-                                <button
-                                    onClick={() => setStep(2)}
-                                    disabled={!validateStep1()}
-                                    className={`flex items-center px-6 py-2 rounded-lg font-medium ${validateStep1()
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        }`}
-                                >
-                                    Next <ArrowRight className="ml-2 w-4 h-4" />
-                                </button>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Customer Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={customerDetails.customerName}
+                                    onChange={(e) => handleCustomerChange('customerName', e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Enter customer name"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Customer Address
+                                </label>
+                                <input
+                                    type="text"
+                                    value={customerDetails.customerAddress}
+                                    onChange={(e) => handleCustomerChange('customerAddress', e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Enter customer address"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Vehicle
+                                </label>
+                                <input
+                                    type="text"
+                                    value={customerDetails.vehicle}
+                                    onChange={(e) => handleCustomerChange('vehicle', e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Enter vehicle number"
+                                />
                             </div>
                         </div>
-                    )}
 
-                    {step === 2 && (
-                        <div className="bg-white rounded-lg shadow-lg p-6">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Product Details</h2>
+                        <div className="mt-6 flex justify-end">
+                            <button
+                                onClick={() => setStep(2)}
+                                disabled={!validateStep1()}
+                                className={`flex items-center px-6 py-2 rounded-lg font-medium ${validateStep1()
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
+                            >
+                                Next <ArrowRight className="ml-2 w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
 
-                            {/* Desktop Table - Hidden on Mobile */}
-                            <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-50">
-                                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">S.No</th>
-                                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">Product Name</th>
-                                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">HSN Code</th>
-                                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">Qty</th>
-                                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">Rate</th>
-                                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">GST %</th>
-                                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">Total</th>
-                                            <th className="px-2 py-3"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {products.map((product, index) => (
-                                            <tr key={product.id} className="border-b">
-                                                <td className="px-2 py-2">{index + 1}</td>
-                                                <td className="px-2 py-2">
-                                                    <input
-                                                        type="text"
-                                                        value={product.productName}
-                                                        onChange={(e) => handleProductChange(product.id, 'productName', e.target.value)}
-                                                        className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                                                        placeholder="Product"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2">
-                                                    <input
-                                                        type="text"
-                                                        value={product.hsnCode}
-                                                        onChange={(e) => handleProductChange(product.id, 'hsnCode', e.target.value)}
-                                                        className="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                                                        placeholder="HSN"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2">
-                                                    <input
-                                                        type="number"
-                                                        value={product.quantity}
-                                                        onChange={(e) => handleProductChange(product.id, 'quantity', parseFloat(e.target.value) || 0)}
-                                                        className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2">
-                                                    <input
-                                                        type="number"
-                                                        value={product.rate}
-                                                        onChange={(e) => handleProductChange(product.id, 'rate', parseFloat(e.target.value) || 0)}
-                                                        className="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2">
-                                                    <input
-                                                        type="number"
-                                                        value={product.gstPercentage}
-                                                        onChange={(e) => handleProductChange(product.id, 'gstPercentage', parseFloat(e.target.value) || 0)}
-                                                        className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-2 font-medium">
-                                                    ₹{product.totalAmount.toFixed(2)}
-                                                </td>
-                                                <td className="px-2 py-2">
-                                                    <button
-                                                        onClick={() => removeProduct(product.id)}
-                                                        className="text-red-600 hover:text-red-800"
-                                                        disabled={products.length === 1}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                {step === 2 && (
+                    <div className="bg-white rounded-lg shadow-lg p-6">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">Product Details</h2>
 
-                            {/* Mobile Cards - Hidden on Desktop */}
-                            <div className="md:hidden space-y-4">
-                                {products.map((product, index) => (
-                                    <div key={product.id} className="border-2 border-gray-200 rounded-lg p-4 bg-white shadow-sm">
-                                        {/* Header with Serial Number and Delete */}
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-lg font-semibold text-gray-700">Product #{index + 1}</h3>
-                                            <button
-                                                onClick={() => removeProduct(product.id)}
-                                                className="text-red-600 hover:text-red-800 p-2"
-                                                disabled={products.length === 1}
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                            </button>
-                                        </div>
-
-                                        {/* Product Name - Full Width */}
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Product Name
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={product.productName}
-                                                onChange={(e) => handleProductChange(product.id, 'productName', e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder="Enter product name"
-                                            />
-                                        </div>
-
-                                        {/* HSN Code - Full Width */}
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                HSN Code
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={product.hsnCode}
-                                                onChange={(e) => handleProductChange(product.id, 'hsnCode', e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder="Enter HSN code"
-                                            />
-                                        </div>
-
-                                        {/* Quantity and Rate - Side by Side */}
-                                        <div className="grid grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Quantity
-                                                </label>
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">S.No</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">Product Name</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">HSN Code</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">Qty</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">Rate</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">GST %</th>
+                                        <th className="px-2 py-3 text-left text-xs font-medium text-gray-700">Total</th>
+                                        <th className="px-2 py-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {products.map((product, index) => (
+                                        <tr key={product.id} className="border-b">
+                                            <td className="px-2 py-2">{index + 1}</td>
+                                            <td className="px-2 py-2">
+                                                <input
+                                                    type="text"
+                                                    value={product.productName}
+                                                    onChange={(e) => handleProductChange(product.id, 'productName', e.target.value)}
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                                    placeholder="Product"
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2">
+                                                <input
+                                                    type="text"
+                                                    value={product.hsnCode}
+                                                    onChange={(e) => handleProductChange(product.id, 'hsnCode', e.target.value)}
+                                                    className="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                                    placeholder="HSN"
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2">
                                                 <input
                                                     type="number"
                                                     value={product.quantity}
                                                     onChange={(e) => handleProductChange(product.id, 'quantity', parseFloat(e.target.value) || 0)}
-                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    placeholder="0"
+                                                    className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                                                 />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Rate (₹)
-                                                </label>
+                                            </td>
+                                            <td className="px-2 py-2">
                                                 <input
                                                     type="number"
                                                     value={product.rate}
                                                     onChange={(e) => handleProductChange(product.id, 'rate', parseFloat(e.target.value) || 0)}
-                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    placeholder="0"
+                                                    className="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                                                 />
-                                            </div>
-                                        </div>
-
-                                        {/* GST and Total - Side by Side */}
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    GST %
-                                                </label>
+                                            </td>
+                                            <td className="px-2 py-2">
                                                 <input
                                                     type="number"
                                                     value={product.gstPercentage}
                                                     onChange={(e) => handleProductChange(product.id, 'gstPercentage', parseFloat(e.target.value) || 0)}
-                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    placeholder="18"
+                                                    className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                                                 />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Total
-                                                </label>
-                                                <div className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg font-bold text-blue-600 text-lg">
-                                                    ₹{product.totalAmount.toFixed(2)}
-                                                </div>
+                                            </td>
+                                            <td className="px-2 py-2 font-medium">
+                                                ₹{product.totalAmount.toFixed(2)}
+                                            </td>
+                                            <td className="px-2 py-2">
+                                                <button
+                                                    onClick={() => removeProduct(product.id)}
+                                                    className="text-red-600 hover:text-red-800"
+                                                    disabled={products.length === 1}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="md:hidden space-y-4">
+                            {products.map((product, index) => (
+                                <div key={product.id} className="border-2 border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-lg font-semibold text-gray-700">Product #{index + 1}</h3>
+                                        <button
+                                            onClick={() => removeProduct(product.id)}
+                                            className="text-red-600 hover:text-red-800 p-2"
+                                            disabled={products.length === 1}
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
+                                        <input
+                                            type="text"
+                                            value={product.productName}
+                                            onChange={(e) => handleProductChange(product.id, 'productName', e.target.value)}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Enter product name"
+                                        />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">HSN Code</label>
+                                        <input
+                                            type="text"
+                                            value={product.hsnCode}
+                                            onChange={(e) => handleProductChange(product.id, 'hsnCode', e.target.value)}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Enter HSN code"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                                            <input
+                                                type="number"
+                                                value={product.quantity}
+                                                onChange={(e) => handleProductChange(product.id, 'quantity', parseFloat(e.target.value) || 0)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Rate (₹)</label>
+                                            <input
+                                                type="number"
+                                                value={product.rate}
+                                                onChange={(e) => handleProductChange(product.id, 'rate', parseFloat(e.target.value) || 0)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">GST %</label>
+                                            <input
+                                                type="number"
+                                                value={product.gstPercentage}
+                                                onChange={(e) => handleProductChange(product.id, 'gstPercentage', parseFloat(e.target.value) || 0)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                placeholder="18"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Total</label>
+                                            <div className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg font-bold text-blue-600 text-lg">
+                                                ₹{product.totalAmount.toFixed(2)}
                                             </div>
                                         </div>
                                     </div>
-                                ))}
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={addProduct}
+                            className="mt-4 flex items-center px-4 py-2 text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50"
+                        >
+                            <Plus className="w-4 h-4 mr-2" /> Add Product
+                        </button>
+
+                        <div className="mt-4">
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Mode</label>
+                                <select
+                                    value={paymentMode}
+                                    onChange={(e) => setPaymentMode(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="unpaid">Unpaid</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="online">Online</option>
+                                </select>
                             </div>
-                            <button
-                                onClick={addProduct}
-                                className="mt-4 flex items-center px-4 py-2 text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50"
-                            >
-                                <Plus className="w-4 h-4 mr-2" /> Add Product
-                            </button>
-
-
 
                             <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">GSTIN (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={gstin}
+                                    onChange={(e) => setGstin(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Enter GSTIN number for this invoice"
+                                />
+                            </div>
 
-                                <div className="mt-4">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Payment Mode
-                                    </label>
-                                    <select
-                                        value={paymentMode}
-                                        onChange={(e) => setPaymentMode(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="unpaid">Unpaid</option>
-                                        <option value="cash">Cash</option>
-                                        <option value="online">Online</option>
-                                    </select>
-                                </div>
-
-                                <div className="mt-4">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        GSTIN (Optional)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={gstin}
-                                        onChange={(e) => setGstin(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Enter GSTIN number for this invoice"
-                                    />
-                                </div>
-
-                                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-lg font-semibold text-gray-700">Grand Total:</span>
-                                        <span className="text-2xl font-bold text-blue-600">
-                                            ₹{calculateGrandTotal().toFixed(2)}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="mt-6 flex justify-between">
-                                    <button
-                                        onClick={() => setStep(1)}
-                                        className="flex items-center px-6 py-2 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50"
-                                    >
-                                        <ArrowLeft className="mr-2 w-4 h-4" /> Back
-                                    </button>
-                                    <button
-                                        onClick={saveInvoice}
-                                        disabled={saving}
-                                        className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                                    >
-                                        <Save className="mr-2 w-4 h-4" />
-                                        {saving ? 'Saving...' : 'Save Invoice'}
-                                    </button>
+                            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-lg font-semibold text-gray-700">Grand Total:</span>
+                                    <span className="text-2xl font-bold text-blue-600">
+                                        ₹{calculateGrandTotal().toFixed(2)}
+                                    </span>
                                 </div>
                             </div>
+
+                            <div className="mt-6 flex justify-between">
+                                <button
+                                    onClick={() => setStep(1)}
+                                    className="flex items-center px-6 py-2 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50"
+                                >
+                                    <ArrowLeft className="mr-2 w-4 h-4" /> Back
+                                </button>
+                                <button
+                                    onClick={saveInvoice}
+                                    disabled={saving}
+                                    className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                                >
+                                    <Save className="mr-2 w-4 h-4" />
+                                    {saving ? 'Saving...' : 'Save Invoice'}
+                                </button>
+                            </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
-       
+        </div>
     );
-};;
+};
 
 export default InvoiceGenerator;

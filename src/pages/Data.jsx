@@ -138,7 +138,7 @@ const Data = () => {
     invoices.forEach(inv => {
       const customerId = inv.customer_id;
       const customerName = inv.customer?.name || 'Unknown';
-      
+
       if (!customerStats[customerId]) {
         customerStats[customerId] = {
           name: customerName,
@@ -261,22 +261,20 @@ const Data = () => {
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('overview')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                viewMode === 'overview'
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${viewMode === 'overview'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               <TrendingUp size={20} />
               Overview
             </button>
             <button
               onClick={() => setViewMode('daywise')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                viewMode === 'daywise'
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${viewMode === 'daywise'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               <BarChart3 size={20} />
               Day-wise Analytics
@@ -434,7 +432,7 @@ const Data = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis />
-                      <Tooltip 
+                      <Tooltip
                         formatter={(value, name) => {
                           if (name === 'revenue') return [`₹${value.toLocaleString()}`, 'Revenue'];
                           return [value, 'Invoices'];
@@ -455,21 +453,18 @@ const Data = () => {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
                           <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Invoices</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Avg per Invoice</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
+
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {stats.dailyRevenue.map((day, idx) => (
                           <tr key={idx} className="hover:bg-gray-50">
                             <td className="px-4 py-3 text-sm text-gray-900">{day.date}</td>
+                            <td className="px-4 py-3 text-sm text-right text-gray-700">{day.invoices}</td>
                             <td className="px-4 py-3 text-sm text-right font-semibold text-blue-600">
                               ₹{day.revenue.toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-700">{day.invoices}</td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-700">
-                              ₹{(day.revenue / day.invoices).toFixed(0)}
                             </td>
                           </tr>
                         ))}
