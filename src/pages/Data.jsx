@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Calendar, DollarSign, Users, FileText, TrendingUp, Package, Filter, BarChart3 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { Calendar, DollarSign, Users, FileText, TrendingUp, Package, Filter } from 'lucide-react';
+
 
 const Data = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'daywise'
   const [stats, setStats] = useState({
     totalRevenue: 0,
     paidRevenue: 0,
@@ -14,11 +17,12 @@ const Data = () => {
     uniqueCustomers: 0,
     topProducts: [],
     topCustomers: [],
-    paymentBreakdown: { cash: 0, online: 0, unpaid: 0 }
+    paymentBreakdown: { cash: 0, online: 0, unpaid: 0 },
+    dailyRevenue: [],
+    paymentModeData: []
   });
 
   useEffect(() => {
-    // Set default date range (last 30 days)
     const today = new Date();
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(today.getDate() - 30);
@@ -37,7 +41,6 @@ const Data = () => {
     setLoading(true);
 
     try {
-      // Fetch invoices in date range
       const { data: invoices, error: invoiceError } = await supabase
         .from('invoices')
         .select(`
@@ -50,7 +53,6 @@ const Data = () => {
 
       if (invoiceError) throw invoiceError;
 
-      // Fetch invoice items for product statistics
       const invoiceIds = invoices.map(inv => inv.id);
       const { data: items, error: itemsError } = await supabase
         .from('invoice_items')
@@ -59,7 +61,6 @@ const Data = () => {
 
       if (itemsError) throw itemsError;
 
-      // Calculate statistics
       calculateStats(invoices, items);
 
     } catch (error) {
@@ -70,7 +71,6 @@ const Data = () => {
   };
 
   const calculateStats = (invoices, items) => {
-    // Total revenue and payment breakdown
     let totalRevenue = 0;
     let paidRevenue = 0;
     let unpaidRevenue = 0;
@@ -78,9 +78,20 @@ const Data = () => {
     let onlineCount = 0;
     let unpaidCount = 0;
 
+    // Daily revenue tracking
+    const dailyRevenueMap = {};
+
     invoices.forEach(inv => {
       const amount = parseFloat(inv.total_amount);
       totalRevenue += amount;
+
+      // Track daily revenue
+      const date = inv.bill_date;
+      if (!dailyRevenueMap[date]) {
+        dailyRevenueMap[date] = { date, revenue: 0, invoices: 0 };
+      }
+      dailyRevenueMap[date].revenue += amount;
+      dailyRevenueMap[date].invoices += 1;
 
       if (inv.mode_of_payment === 'cash') {
         paidRevenue += amount;
@@ -94,11 +105,17 @@ const Data = () => {
       }
     });
 
-    // Unique customers
+    // Convert daily revenue map to sorted array
+    const dailyRevenue = Object.values(dailyRevenueMap)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .map(day => ({
+        ...day,
+        date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      }));
+
     const uniqueCustomerIds = new Set(invoices.map(inv => inv.customer_id));
     const uniqueCustomers = uniqueCustomerIds.size;
 
-    // Top products by revenue
     const productStats = {};
     items.forEach(item => {
       const productName = item.product_name;
@@ -117,7 +134,6 @@ const Data = () => {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
-    // Top customers by revenue
     const customerStats = {};
     invoices.forEach(inv => {
       const customerId = inv.customer_id;
@@ -138,6 +154,13 @@ const Data = () => {
       .sort((a, b) => b.totalSpent - a.totalSpent)
       .slice(0, 5);
 
+    // Payment mode data for pie chart
+    const paymentModeData = [
+      { name: 'Cash', value: cashCount, color: '#10b981' },
+      { name: 'Online', value: onlineCount, color: '#3b82f6' },
+      { name: 'Unpaid', value: unpaidCount, color: '#f59e0b' }
+    ].filter(item => item.value > 0);
+
     setStats({
       totalRevenue,
       paidRevenue,
@@ -150,7 +173,9 @@ const Data = () => {
         cash: cashCount,
         online: onlineCount,
         unpaid: unpaidCount
-      }
+      },
+      dailyRevenue,
+      paymentModeData
     });
   };
 
@@ -163,8 +188,10 @@ const Data = () => {
     setStartDate(pastDate.toISOString().split('T')[0]);
   };
 
+  const COLORS = ['#10b981', '#3b82f6', '#f59e0b'];
+
   return (
-    <div className="bg-gray-50 p-4 md:p-6">
+    <div className="bg-gray-50 p-4 md:p-6 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Sales Analytics</h1>
 
@@ -229,6 +256,34 @@ const Data = () => {
           </div>
         </div>
 
+        {/* View Mode Toggle */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode('overview')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                viewMode === 'overview'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <TrendingUp size={20} />
+              Overview
+            </button>
+            <button
+              onClick={() => setViewMode('daywise')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                viewMode === 'daywise'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <BarChart3 size={20} />
+              Day-wise Analytics
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
@@ -238,7 +293,6 @@ const Data = () => {
           <>
             {/* Key Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              {/* Total Revenue */}
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
                 <div className="flex items-center justify-between mb-2">
                   <DollarSign size={32} />
@@ -248,7 +302,6 @@ const Data = () => {
                 <p className="text-3xl font-bold">₹{stats.totalRevenue.toLocaleString()}</p>
               </div>
 
-              {/* Paid Revenue */}
               <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md p-6 text-white">
                 <div className="flex items-center justify-between mb-2">
                   <DollarSign size={32} />
@@ -258,7 +311,6 @@ const Data = () => {
                 <p className="text-3xl font-bold">₹{stats.paidRevenue.toLocaleString()}</p>
               </div>
 
-              {/* Unpaid Revenue */}
               <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg shadow-md p-6 text-white">
                 <div className="flex items-center justify-between mb-2">
                   <DollarSign size={32} />
@@ -268,7 +320,6 @@ const Data = () => {
                 <p className="text-3xl font-bold">₹{stats.unpaidRevenue.toLocaleString()}</p>
               </div>
 
-              {/* Unique Customers */}
               <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md p-6 text-white">
                 <div className="flex items-center justify-between mb-2">
                   <Users size={32} />
@@ -280,90 +331,154 @@ const Data = () => {
               </div>
             </div>
 
-            {/* Payment Breakdown */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <DollarSign className="text-blue-600" size={24} />
-                Payment Breakdown
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-sm text-gray-600 mb-1">Cash Payments</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    ₹{stats.paymentBreakdown.cash.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-gray-600 mb-1">Online Payments</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    ₹{stats.paymentBreakdown.online.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <p className="text-sm text-gray-600 mb-1">Unpaid</p>
-                  <p className="text-2xl font-bold text-yellow-600">
-                    ₹{stats.paymentBreakdown.unpaid.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Top Products and Customers */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Top Products */}
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <Package className="text-purple-600" size={24} />
-                  Top 5 Products by Revenue
-                </h2>
-                <div className="space-y-3">
-                  {stats.topProducts.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No products sold in this period</p>
-                  ) : (
-                    stats.topProducts.map((product, idx) => (
-                      <div key={idx} className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-gray-900">{product.name}</h3>
-                          <span className="text-lg font-bold text-purple-600">
-                            ₹{product.revenue.toLocaleString()}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          Quantity Sold: {product.quantity.toLocaleString()}
-                        </p>
+            {viewMode === 'overview' ? (
+              <>
+                {/* Charts Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  {/* Payment Breakdown Pie Chart */}
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <DollarSign className="text-blue-600" size={24} />
+                      Payment Breakdown
+                    </h2>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={stats.paymentModeData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {stats.paymentModeData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="grid grid-cols-3 gap-2 mt-4">
+                      <div className="text-center p-2 bg-green-50 rounded">
+                        <p className="text-xs text-gray-600">Cash</p>
+                        <p className="font-bold text-green-600">₹{stats.paymentBreakdown.cash.toLocaleString()}</p>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Top Customers */}
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <Users className="text-blue-600" size={24} />
-                  Top 5 Customers by Revenue
-                </h2>
-                <div className="space-y-3">
-                  {stats.topCustomers.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No customers in this period</p>
-                  ) : (
-                    stats.topCustomers.map((customer, idx) => (
-                      <div key={idx} className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-gray-900">{customer.name}</h3>
-                          <span className="text-lg font-bold text-blue-600">
-                            ₹{customer.totalSpent.toLocaleString()}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          {customer.invoiceCount} {customer.invoiceCount === 1 ? 'invoice' : 'invoices'}
-                        </p>
+                      <div className="text-center p-2 bg-blue-50 rounded">
+                        <p className="text-xs text-gray-600">Online</p>
+                        <p className="font-bold text-blue-600">₹{stats.paymentBreakdown.online.toLocaleString()}</p>
                       </div>
-                    ))
-                  )}
+                      <div className="text-center p-2 bg-yellow-50 rounded">
+                        <p className="text-xs text-gray-600">Unpaid</p>
+                        <p className="font-bold text-yellow-600">₹{stats.paymentBreakdown.unpaid.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Products Bar Chart */}
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <Package className="text-purple-600" size={24} />
+                      Top Products by Revenue
+                    </h2>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={stats.topProducts}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                        <YAxis />
+                        <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
+                        <Bar dataKey="revenue" fill="#9333ea" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-              </div>
-            </div>
+
+                {/* Top Customers */}
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <Users className="text-blue-600" size={24} />
+                    Top 5 Customers by Revenue
+                  </h2>
+                  <div className="space-y-3">
+                    {stats.topCustomers.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No customers in this period</p>
+                    ) : (
+                      stats.topCustomers.map((customer, idx) => (
+                        <div key={idx} className="p-4 bg-gray-50 rounded-lg">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-semibold text-gray-900">{customer.name}</h3>
+                            <span className="text-lg font-bold text-blue-600">
+                              ₹{customer.totalSpent.toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {customer.invoiceCount} {customer.invoiceCount === 1 ? 'invoice' : 'invoices'}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Day-wise Revenue Chart */}
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <Calendar className="text-blue-600" size={24} />
+                    Daily Revenue Trend
+                  </h2>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <LineChart data={stats.dailyRevenue}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value, name) => {
+                          if (name === 'revenue') return [`₹${value.toLocaleString()}`, 'Revenue'];
+                          return [value, 'Invoices'];
+                        }}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} name="Revenue" />
+                      <Line type="monotone" dataKey="invoices" stroke="#10b981" strokeWidth={2} name="Invoices" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Day-wise Table */}
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-semibold mb-4">Day-wise Breakdown</h2>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Revenue</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Invoices</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Avg per Invoice</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {stats.dailyRevenue.map((day, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">{day.date}</td>
+                            <td className="px-4 py-3 text-sm text-right font-semibold text-blue-600">
+                              ₹{day.revenue.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right text-gray-700">{day.invoices}</td>
+                            <td className="px-4 py-3 text-sm text-right text-gray-700">
+                              ₹{(day.revenue / day.invoices).toFixed(0)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
