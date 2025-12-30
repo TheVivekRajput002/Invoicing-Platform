@@ -49,7 +49,7 @@ const Header = () => {
                   isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 w-0'
                 }`}
               >
-                Shiv Shakti Auto
+                Shiv Shakti AutoMobile
               </span>
             </div>
           </div>

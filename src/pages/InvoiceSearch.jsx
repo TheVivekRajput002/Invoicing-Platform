@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Search as SearchIcon, FileText, AlertCircle, Calendar, DollarSign, X, Tag, User, CreditCard, TrendingUp, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import InvoiceDetailsView from '../components/InvoiceDetailsView';
 
 const InvoiceSearch = () => {
     const navigate = useNavigate();
@@ -403,23 +402,6 @@ const InvoiceSearch = () => {
 
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                    {/* Invoice Details Panel */}
-                    {/* <div className="space-y-6 lg:col-span-2">
-                        {selectedInvoice ? (
-                            <InvoiceDetailsView
-                                invoice={selectedInvoice}
-                                invoiceItems={invoiceItems}
-                                customer={selectedInvoice.customer}
-                            />
-                        ) : (
-                            <div className="bg-green-50 rounded-lg p-6 text-center">
-                                <AlertCircle className="mx-auto text-green-600 mb-3" size={48} />
-                                <h3 className="font-semibold text-gray-900 mb-2">Select an Invoice</h3>
-                                <p className="text-gray-600 text-sm">Click on an invoice to view details and items</p>
-                            </div>
-                        )}
-                    </div> */}
 
                     {/* Invoice List */}
                     <div className="lg:col-span-3">
