@@ -81,6 +81,11 @@ const InvoiceGenerator = () => {
     }, [gstIncluded]);
 
     const searchCustomerByPhone = async (phoneNumber) => {
+        if (!phoneNumber || phoneNumber.length !== 10) {
+            setCustomerFound(false);
+            return;
+        }
+
         setSearchingCustomer(true);
         setCustomerFound(false);
 
@@ -89,9 +94,17 @@ const InvoiceGenerator = () => {
                 .from('customers')
                 .select('*')
                 .eq('phone_number', phoneNumber)
+                .order('created_at', { ascending: false }) // Get most recent first
+                .limit(1)
                 .maybeSingle();
 
-            if (!error && data) {
+            if (error) {
+                console.error('Search error:', error);
+                setCustomerFound(false);
+                return;
+            }
+
+            if (data) {
                 setCustomerDetails({
                     customerName: data.name || '',
                     customerAddress: data.address || '',
@@ -99,8 +112,6 @@ const InvoiceGenerator = () => {
                     phoneNumber: data.phone_number
                 });
                 setCustomerFound(true);
-            } else {
-                setCustomerFound(false);
             }
         } catch (error) {
             console.error('Error searching customer:', error);
@@ -366,16 +377,17 @@ const InvoiceGenerator = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
                             {/* Left - Company Details */}
-                            <div className="p-6 border-r-2 border-t-2  border-gray-300">
+                            <div className="p-6 border-r-2 border-t-2  border-gray-300 ml-1">
                                 <div className="flex items-start gap-4">
                                     <div className="w-18 h-18 bg-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0">
                                         <Building2 size={34} className="text-gray-800" />
                                     </div>
                                     <div>
                                         <h1 className="text-2xl font-bold text-gray-800">Shiv Shakti Automobile</h1>
-                                        <p className="text-sm text-gray-600 mt-1">Near Bus Stand</p>
-                                        <p className="text-sm text-gray-600">Vidisha, M.P.</p>
+                                        <p className="text-sm text-gray-600 mt-1">Near new Bus Stand, Vidisha, M.P.</p>
+                                        <p className="text-sm text-gray-600">Mobile No. - 9993646020</p>
                                         <p className="text-sm text-gray-600 mt-1">GST: 23AYKPR3166N1ZV</p>
+
                                     </div>
                                 </div>
                             </div>
@@ -492,7 +504,7 @@ const InvoiceGenerator = () => {
 
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Vehicle
+                                    Vehicle / Mechanic
                                 </label>
                                 <input
                                     ref={(el) => setInputRef('vehicle', el)}
