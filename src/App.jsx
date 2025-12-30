@@ -10,7 +10,7 @@ import ViewEditInvoice from './pages/ViewEditInvoice';
 import CustomerSearch from './pages/CustomerSearch';
 import InvoiceSearch from './pages/InvoiceSearch';
 import ProductSearch from './pages/ProductSearch';
-import Staff from './pages/Staff';
+import StaffManage from './pages/StaffManage';
 
 function App() {
   return (
@@ -27,7 +27,7 @@ function App() {
             <Route path='/customer/search' element={<CustomerSearch />} />
             <Route path='/product/search' element={<ProductSearch />} />
             <Route path='/data' element={<Data />} />
-            <Route path='/staff' element={<Staff />} />
+            <Route path='/staff' element={<StaffManage />} />
             {/* <Route path='/search' element={<Search />} /> */}
 
             <Route path='/billing/invoice/search' element={<InvoiceSearch />} />
