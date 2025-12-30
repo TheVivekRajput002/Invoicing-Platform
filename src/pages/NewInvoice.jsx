@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Save, CheckCircle, Building2, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import InvoicePDF from '../components/InvoicePDF';
 
 const InvoiceGenerator = () => {
     const [paymentMode, setPaymentMode] = useState('unpaid');
@@ -12,6 +14,9 @@ const InvoiceGenerator = () => {
     const [dueDate, setDueDate] = useState('');
     const [phoneError, setPhoneError] = useState('');
     const [gstIncluded, setGstIncluded] = useState(false); // false = without GST, true = with GST
+    const [invoiceSaved, setInvoiceSaved] = useState(false);
+    const [savedInvoiceData, setSavedInvoiceData] = useState(null);
+
 
     // Refs for keyboard navigation
     const inputRefs = useRef({});
@@ -297,7 +302,20 @@ const InvoiceGenerator = () => {
                 throw itemsError;
             }
 
-            alert('Invoice saved successfully!');
+            // Store saved data for PDF generation
+            setSavedInvoiceData({
+                invoice: invoiceData,
+                customer: {
+                    name: customerDetails.customerName,
+                    phone_number: customerDetails.phoneNumber,
+                    address: customerDetails.customerAddress,
+                    vehicle: customerDetails.vehicle
+                },
+                products: products
+            });
+            setInvoiceSaved(true);
+
+            alert('Invoice saved successfully! You can now download the PDF.');
 
             // Reset form
             setCustomerDetails({
@@ -818,20 +836,52 @@ const InvoiceGenerator = () => {
                     {/* Action Buttons */}
                     <div className="p-6 bg-white border-t-2 border-gray-300">
                         <div className="flex justify-end">
-                            <button
-                                onClick={saveInvoice}
-                                disabled={
-                                    saving ||
-                                    !customerDetails.customerName ||
-                                    !customerDetails.phoneNumber ||
-                                    phoneError ||
-                                    customerDetails.phoneNumber.length !== 10
-                                }
-                                className="flex items-center px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold text-lg shadow-lg"
-                            >
-                                <Save className="mr-2 w-5 h-5" />
-                                {saving ? 'Saving Invoice...' : 'Save Invoice'}
-                            </button>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={saveInvoice}
+                                    disabled={
+                                        saving ||
+                                        !customerDetails.customerName ||
+                                        !customerDetails.phoneNumber ||
+                                        phoneError ||
+                                        customerDetails.phoneNumber.length !== 10
+                                    }
+                                    className="flex items-center px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold text-lg shadow-lg"
+                                >
+                                    <Save className="mr-2 w-5 h-5" />
+                                    {saving ? 'Saving Invoice...' : 'Save Invoice'}
+                                </button>
+
+                                {invoiceSaved && savedInvoiceData && (
+                                    <PDFDownloadLink
+                                        document={
+                                            <InvoicePDF
+                                                invoice={savedInvoiceData.invoice}
+                                                customer={savedInvoiceData.customer}
+                                                products={savedInvoiceData.products}
+                                            />
+                                        }
+                                        fileName={`Invoice-${savedInvoiceData.invoice.invoice_number}.pdf`}
+                                        className="flex items-center px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg shadow-lg"
+                                    >
+                                        {({ loading }) =>
+                                            loading ? (
+                                                <span className="flex items-center">
+                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                                    Generating PDF...
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center">
+                                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    Download PDF
+                                                </span>
+                                            )
+                                        }
+                                    </PDFDownloadLink>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

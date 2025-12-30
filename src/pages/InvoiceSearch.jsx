@@ -250,6 +250,7 @@ const InvoiceSearch = () => {
     return (
         <div className="bg-gray-50 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
+                
                 {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}

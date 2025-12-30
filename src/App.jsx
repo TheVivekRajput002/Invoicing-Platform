@@ -11,6 +11,9 @@ import CustomerSearch from './pages/CustomerSearch';
 import InvoiceSearch from './pages/InvoiceSearch';
 import ProductSearch from './pages/ProductSearch';
 import StaffManage from './pages/StaffManage';
+import ProductAdd from './pages/ProductAdd';
+import Product from './pages/Product';
+import TestPage from './pages/TestPage';
 
 function App() {
   return (
@@ -28,6 +31,8 @@ function App() {
             <Route path='/product/search' element={<ProductSearch />} />
             <Route path='/data' element={<Data />} />
             <Route path='/staff' element={<StaffManage />} />
+            <Route path='/product/add' element={<ProductAdd />} />
+            <Route path='/product' element={<Product />} />
             {/* <Route path='/search' element={<Search />} /> */}
 
             <Route path='/billing/invoice/search' element={<InvoiceSearch />} />
@@ -36,6 +41,7 @@ function App() {
 
             <Route path='/billing/invoice/:id' element={<ViewEditInvoice />} />
             <Route path='/customer/edit/:id' element={<EditCustomer />} />
+            <Route path='/test' element={<TestPage />} />
 
           </Routes>
         </main>
