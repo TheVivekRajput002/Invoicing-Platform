@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
         padding: 6,
         backgroundColor: '#ffffff',
         borderRadius: 4,
-        border: 2,
+        borderWidth: 2,
         borderColor: '#e5e7eb',
     },
     // Items Section
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
         padding: 15,
     },
     table: {
-        border: 2,
+        borderWidth: 2,
         borderColor: '#d1d5db',
         borderRadius: 4,
     },
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
         padding: 6,
         backgroundColor: '#ffffff',
         borderRadius: 4,
-        border: 2,
+        borderWidth: 2,
         borderColor: '#e5e7eb',
     },
     paymentBadgeInner: {
@@ -293,13 +293,13 @@ const InvoicePDF = ({ invoice, customer, products }) => {
     const calculateTotalGST = () => {
         return products.reduce((sum, product) => {
             const base = product.quantity * product.rate;
-            const gst = (base * product.gst_percentage) / 100;
+            const gst = (base * product.gstPercentage) / 100;
             return sum + gst;
         }, 0);
     };
 
     const calculateGrandTotal = () => {
-        return products.reduce((sum, product) => sum + product.total_product, 0);
+        return products.reduce((sum, product) => sum + product.totalAmount, 0);
     };
 
     const formatDate = (dateString) => {
@@ -412,7 +412,7 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                                 <Text style={styles.col4}>{product.quantity}</Text>
                                 <Text style={styles.col5}>₹{parseFloat(product.rate).toFixed(2)}</Text>
                                 <Text style={styles.col6}>{product.gstPercentage}%</Text>
-                                <Text style={styles.col7}>₹{parseFloat(product.totalProduct).toFixed(2)}</Text>
+                                <Text style={styles.col7}>₹{parseFloat(product.totalAmount).toFixed(2)}</Text>
                             </View>
                         ))}
                     </View>
