@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Save, CheckCircle, Building2, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 const InvoiceGenerator = () => {
     const [paymentMode, setPaymentMode] = useState('unpaid');
@@ -21,6 +22,8 @@ const InvoiceGenerator = () => {
             inputRefs.current[key] = element;
         }
     };
+
+    const navigate = useNavigate();
 
     const [customerDetails, setCustomerDetails] = useState({
         customerName: '',
@@ -370,7 +373,30 @@ const InvoiceGenerator = () => {
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-8">
             <div className="max-w-6xl mx-auto">
+                {/* Back Button */}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                    <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                        />
+                    </svg>
+                    <span className="font-medium">Back</span>
+                </button>
+
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+
+
                     {/* Header Section - Company & Invoice Details */}
                     <div className="border-y-4 border-gray-800">
                         <h2 className="text-xl font-bold text-gray-800 my-6 text-center">TAX INVOICE</h2>
@@ -434,9 +460,13 @@ const InvoiceGenerator = () => {
                                 <div className="relative">
                                     <input
                                         ref={(el) => setInputRef('phoneNumber', el)}
+
                                         type="tel"
                                         value={customerDetails.phoneNumber}
-                                        onChange={(e) => handleCustomerChange('phoneNumber', e.target.value)}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            handleCustomerChange('phoneNumber', value);
+                                        }}
                                         onKeyDown={(e) => handleKeyDown(e, 'phoneNumber')}
                                         className={`w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${phoneError
                                             ? 'border-red-500 focus:ring-red-500'

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Search as SearchIcon, FileText, AlertCircle, Calendar, DollarSign, X, Tag, User, CreditCard, TrendingUp, Filter } from 'lucide-react';
+import { Search as SearchIcon, FileText, Phone, AlertCircle, Calendar, DollarSign, X, Tag, User, CreditCard, TrendingUp, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const InvoiceSearch = () => {
@@ -16,6 +16,7 @@ const InvoiceSearch = () => {
     const [activeFilters, setActiveFilters] = useState({
         paymentStatus: null, // 'paid', 'unpaid', or null
         customerName: '',
+        phoneNumber: '',
         dateFrom: '',
         dateTo: '',
         minAmount: '',
@@ -67,6 +68,7 @@ const InvoiceSearch = () => {
             filtered = filtered.filter(inv =>
                 inv.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 inv.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                inv.customer?.phone_number?.includes(searchQuery) ||
                 inv.bill_date.includes(searchQuery)
             );
         }
@@ -84,6 +86,13 @@ const InvoiceSearch = () => {
         if (activeFilters.customerName.trim()) {
             filtered = filtered.filter(inv =>
                 inv.customer?.name?.toLowerCase().includes(activeFilters.customerName.toLowerCase())
+            );
+        }
+
+        // Phone number filter
+        if (activeFilters.phoneNumber && activeFilters.phoneNumber.trim()) {
+            filtered = filtered.filter(inv =>
+                inv.customer?.phone_number?.includes(activeFilters.phoneNumber)
             );
         }
 
@@ -162,6 +171,7 @@ const InvoiceSearch = () => {
         setActiveFilters({
             paymentStatus: null,
             customerName: '',
+            phoneNumber: '',
             dateFrom: '',
             dateTo: '',
             minAmount: '',
@@ -187,6 +197,14 @@ const InvoiceSearch = () => {
                 key: 'customerName',
                 label: `Customer: ${activeFilters.customerName}`,
                 color: 'bg-blue-100 text-blue-800'
+            });
+        }
+
+        if (activeFilters.phoneNumber) {
+            tags.push({
+                key: 'phoneNumber',
+                label: `Phone: ${activeFilters.phoneNumber}`,
+                color: 'bg-cyan-100 text-cyan-800'
             });
         }
 
@@ -232,6 +250,27 @@ const InvoiceSearch = () => {
     return (
         <div className="bg-gray-50 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
+                {/* Back Button */}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                    <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                        />
+                    </svg>
+                    <span className="font-medium">Back</span>
+                </button>
+
                 <h1 className="text-3xl font-bold text-gray-900 mb-6">Invoice Search</h1>
 
                 {/* Search Bar and Filters */}
@@ -278,6 +317,20 @@ const InvoiceSearch = () => {
                                 placeholder="Enter customer name"
                                 value={activeFilters.customerName}
                                 onChange={(e) => updateFilter('customerName', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
+                        {/* phone number Filter */}
+                        <div>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                <Phone size={16} />
+                                Phone Number
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Enter phone number"
+                                value={activeFilters.phoneNumber}
+                                onChange={(e) => updateFilter('phoneNumber', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                             />
                         </div>
