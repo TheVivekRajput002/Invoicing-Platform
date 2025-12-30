@@ -4,6 +4,15 @@ import { supabase } from '../supabaseClient';
 
 
 const StaffManagement = () => {
+
+  const getLocalDateString = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,14 +31,14 @@ const StaffManagement = () => {
     phone_number: '',
     designation: '',
     monthly_salary: '',
-    date_of_joining: new Date().toISOString().split('T')[0]
+    date_of_joining: getLocalDateString()
   });
 
   // Advance Form
   const [advanceForm, setAdvanceForm] = useState({
     amount: '',
     reason: '',
-    advance_date: new Date().toISOString().split('T')[0]
+    advance_date: getLocalDateString()
   });
 
   // Staff Analytics
@@ -160,7 +169,7 @@ const StaffManagement = () => {
         phone_number: '',
         designation: '',
         monthly_salary: '',
-        date_of_joining: new Date().toISOString().split('T')[0]
+        date_of_joining: getLocalDateString()
       });
       fetchAllStaff();
     } catch (error) {
@@ -532,19 +541,19 @@ const StaffManagement = () => {
                   }
 
                   for (let day = 1; day <= daysInMonth; day++) {
-                    const dateStr = new Date(year, month, day).toISOString().split('T')[0];
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     const attendance = staffAttendance.find(a => a.date === dateStr);
 
                     days.push(
                       <div
                         key={day}
                         className={`aspect-square flex flex-col items-center justify-center rounded-lg border-2 transition ${attendance?.status === 'present'
-                            ? 'bg-green-100 border-green-300'
-                            : attendance?.status === 'half_day'
-                              ? 'bg-yellow-100 border-yellow-300'
-                              : attendance?.status === 'absent'
-                                ? 'bg-red-100 border-red-300'
-                                : 'bg-white border-gray-200'
+                          ? 'bg-green-100 border-green-300'
+                          : attendance?.status === 'half_day'
+                            ? 'bg-yellow-100 border-yellow-300'
+                            : attendance?.status === 'absent'
+                              ? 'bg-red-100 border-red-300'
+                              : 'bg-white border-gray-200'
                           }`}
                       >
                         <span className="text-sm font-medium text-gray-700">{day}</span>

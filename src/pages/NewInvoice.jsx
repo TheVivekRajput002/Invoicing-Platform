@@ -375,7 +375,7 @@ const InvoiceGenerator = () => {
                                         <h1 className="text-2xl font-bold text-gray-800">Shiv Shakti Automobile</h1>
                                         <p className="text-sm text-gray-600 mt-1">Near Bus Stand</p>
                                         <p className="text-sm text-gray-600">Vidisha, M.P.</p>
-                                        <p className="text-sm text-gray-600">GST: 23AYKPR3166N1ZV</p>
+                                        <p className="text-sm text-gray-600 mt-1">GST: 23AYKPR3166N1ZV</p>
                                     </div>
                                 </div>
                             </div>
@@ -492,7 +492,7 @@ const InvoiceGenerator = () => {
 
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Vehicle Number
+                                    Vehicle
                                 </label>
                                 <input
                                     ref={(el) => setInputRef('vehicle', el)}
@@ -507,7 +507,7 @@ const InvoiceGenerator = () => {
 
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    GSTIN (Optional)
+                                    GSTIN
                                 </label>
                                 <input
                                     ref={(el) => setInputRef('gstin', el)}
