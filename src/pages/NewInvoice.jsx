@@ -35,9 +35,9 @@ const InvoiceGenerator = () => {
             serialNumber: 1,
             productName: '',
             hsnCode: '',
-            quantity: 0,
-            rate: 0,
-            gstPercentage: 0,
+            quantity: '',
+            rate: '',
+            gstPercentage: '',
             totalAmount: 0
         }
     ]);
@@ -361,30 +361,28 @@ const InvoiceGenerator = () => {
             <div className="max-w-6xl mx-auto">
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                     {/* Header Section - Company & Invoice Details */}
-                    <div className="border-b-4 border-gray-800">
+                    <div className="border-y-4 border-gray-800">
+                        <h2 className="text-xl font-bold text-gray-800 my-6 text-center">TAX INVOICE</h2>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
                             {/* Left - Company Details */}
-                            <div className="p-6 border-r-2 border-gray-300">
+                            <div className="p-6 border-r-2 border-t-2  border-gray-300">
                                 <div className="flex items-start gap-4">
-                                    <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <Building2 size={32} className="text-gray-800" />
+                                    <div className="w-18 h-18 bg-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <Building2 size={34} className="text-gray-800" />
                                     </div>
                                     <div>
                                         <h1 className="text-2xl font-bold text-gray-800">Shiv Shakti Automobile</h1>
-                                        <p className="text-sm text-gray-600 mt-1">Vidisha, New Bus Stand</p>
-                                        <p className="text-sm text-gray-600">Madhya Pradesh, India</p>
+                                        <p className="text-sm text-gray-600 mt-1">Near Bus Stand</p>
+                                        <p className="text-sm text-gray-600">Vidisha, M.P.</p>
+                                        <p className="text-sm text-gray-600">GST: 23AYKPR3166N1ZV</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Right - Invoice Details */}
-                            <div className="p-6 bg-gray-50">
-                                <h2 className="text-xl font-bold text-gray-800 mb-4">TAX INVOICE</h2>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between">
-                                        <span className="text-sm font-semibold text-gray-700">Invoice No:</span>
-                                        <span className="text-sm text-gray-900 font-mono">INV-{Date.now()}</span>
-                                    </div>
+                            <div className="p-6 bg-gray-50 border-t-2  border-gray-300">
+                                <div className="space-y-2 mt-6">
                                     <div className="flex justify-between">
                                         <span className="text-sm font-semibold text-gray-700">Invoice Date:</span>
                                         <input
@@ -394,7 +392,12 @@ const InvoiceGenerator = () => {
                                             className="text-sm px-2 py-1 border border-gray-300 rounded"
                                         />
                                     </div>
-                                    <div className="flex justify-between">
+                                    <div className="flex justify-between mt-3">
+                                        <span className="text-sm font-semibold text-gray-700 ">Invoice No:</span>
+                                        <span className="text-sm text-gray-900 font-mono">INV-{Date.now()}</span>
+                                    </div>
+                                    {/* Due Date  */}
+                                    {/* <div className="flex justify-between">
                                         <span className="text-sm font-semibold text-gray-700">Due Date:</span>
                                         <input
                                             type="date"
@@ -402,7 +405,7 @@ const InvoiceGenerator = () => {
                                             onChange={(e) => setDueDate(e.target.value)}
                                             className="text-sm px-2 py-1 border border-gray-300 rounded"
                                         />
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
                         </div>
@@ -410,7 +413,7 @@ const InvoiceGenerator = () => {
 
                     {/* Customer Details Section */}
                     <div className="p-6 border-b-2 border-gray-300 bg-blue-50">
-                        <h3 className="text-lg font-bold text-gray-800 mb-4">BILL TO</h3>
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">BILL</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
