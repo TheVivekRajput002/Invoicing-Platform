@@ -67,6 +67,8 @@ const styles = StyleSheet.create({
         fontFamily: 'Helvetica-Bold',
         color: '#1f2937',
         marginBottom: 10,
+        textAlign: 'center',
+        marginTop: 10,
     },
     invoiceDetailsRow: {
         flexDirection: 'row',
@@ -160,12 +162,13 @@ const styles = StyleSheet.create({
     totalGrid: {
         flexDirection: 'row',
         gap: 20,
+        alignItems: 'flex-start',
     },
     paymentMode: {
         width: '50%',
     },
     totalsBox: {
-        width: '50%',
+        width: '100%',
     },
     totalRow: {
         flexDirection: 'row',
@@ -279,6 +282,29 @@ const styles = StyleSheet.create({
         color: '#9ca3af',
         fontStyle: 'italic',
     },
+    termsPlaceholder: {
+        width: '50%',
+        paddingRight: 10,
+    },
+    totalsContainer: {
+        width: '50%',
+        paddingLeft: 10,
+    },
+    totalsBox: {
+        width: '100%',
+    },
+    paymentModeBelow: {
+        width: '60%',
+        marginTop: 15,
+        marginLeft: 'auto',
+    },
+    termsSectionInline: {
+        padding: 10,
+        backgroundColor: '#f9fafb',
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
 });
 
 const InvoicePDF = ({ invoice, customer, products }) => {
@@ -312,6 +338,7 @@ const InvoicePDF = ({ invoice, customer, products }) => {
             <Page size="A4" style={styles.page}>
                 {/* Header Section */}
                 <View style={styles.headerContainer}>
+                    <Text style={styles.invoiceTitle}>TAX INVOICE</Text>
                     <View style={styles.headerGrid}>
                         {/* Company Details */}
                         <View style={styles.companySection}>
@@ -330,7 +357,6 @@ const InvoicePDF = ({ invoice, customer, products }) => {
 
                         {/* Invoice Details */}
                         <View style={styles.invoiceSection}>
-                            <Text style={styles.invoiceTitle}>TAX INVOICE</Text>
                             <View style={styles.invoiceDetailsRow}>
                                 <Text style={styles.invoiceLabel}>Invoice No:</Text>
                                 <Text style={styles.invoiceValue}>{invoice.invoice_number}</Text>
@@ -421,36 +447,58 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                 {/* Total Section */}
                 <View style={styles.totalSection}>
                     <View style={styles.totalGrid}>
-                        {/* Payment Mode */}
-                        <View style={styles.paymentMode}>
-                            <Text style={styles.fieldLabel}>Payment Mode</Text>
-                            <View style={styles.paymentBadge}>
-                                <View
-                                    style={[
-                                        styles.paymentBadgeInner,
-                                        invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
-                                            ? styles.paymentPaid
-                                            : styles.paymentUnpaid,
-                                    ]}
-                                >
-                                    <Text>{invoice.mode_of_payment.toUpperCase()}</Text>
-                                </View>
+
+                        {/* Left side - Terms and Conditions */}
+                        <View style={styles.termsPlaceholder}>
+                            <View style={styles.termsSectionInline}>
+
+                                <Text style={styles.termsTitle}>Terms & Conditions</Text>
+                                <Text style={styles.termItem}>
+                                    • Errors and omissions are subject to correction.
+                                </Text>
+                                <Text style={styles.termItem}>
+                                    • Goods once sold will not be taken back or exchanged.
+                                </Text>
+                                <Text style={styles.termItem}>
+                                    • Subject to Vidisha Jurisdiction.
+                                </Text>
+
                             </View>
                         </View>
 
-                        {/* Totals */}
-                        <View style={styles.totalsBox}>
-                            <View style={styles.totalRow}>
-                                <Text style={styles.totalLabel}>Subtotal:</Text>
-                                <Text style={styles.totalValue}>₹{calculateSubtotal().toFixed(2)}</Text>
+                        {/* Right side - Totals and Payment */}
+                        <View style={styles.totalsContainer}>
+                            {/* Totals */}
+                            <View style={styles.totalsBox}>
+                                <View style={styles.totalRow}>
+                                    <Text style={styles.totalLabel}>Subtotal:</Text>
+                                    <Text style={styles.totalValue}>₹{calculateSubtotal().toFixed(2)}</Text>
+                                </View>
+                                <View style={styles.totalRow}>
+                                    <Text style={styles.totalLabel}>Total GST:</Text>
+                                    <Text style={styles.totalValue}>₹{calculateTotalGST().toFixed(2)}</Text>
+                                </View>
+                                <View style={styles.grandTotalRow}>
+                                    <Text style={styles.grandTotalLabel}>GRAND TOTAL:</Text>
+                                    <Text style={styles.grandTotalValue}>₹{calculateGrandTotal().toFixed(2)}</Text>
+                                </View>
                             </View>
-                            <View style={styles.totalRow}>
-                                <Text style={styles.totalLabel}>Total GST:</Text>
-                                <Text style={styles.totalValue}>₹{calculateTotalGST().toFixed(2)}</Text>
-                            </View>
-                            <View style={styles.grandTotalRow}>
-                                <Text style={styles.grandTotalLabel}>GRAND TOTAL:</Text>
-                                <Text style={styles.grandTotalValue}>₹{calculateGrandTotal().toFixed(2)}</Text>
+
+                            {/* Payment Mode below totals */}
+                            <View style={styles.paymentModeBelow}>
+                                <Text style={styles.fieldLabel}>Payment Mode</Text>
+                                <View style={styles.paymentBadge}>
+                                    <View
+                                        style={[
+                                            styles.paymentBadgeInner,
+                                            invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
+                                                ? styles.paymentPaid
+                                                : styles.paymentUnpaid,
+                                        ]}
+                                    >
+                                        <Text>{invoice.mode_of_payment.toUpperCase()}</Text>
+                                    </View>
+                                </View>
                             </View>
                         </View>
                     </View>
@@ -472,26 +520,6 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                                 <Text style={styles.signatureText}>For Shiv Shakti Automobile</Text>
                             </View>
                         </View>
-                    </View>
-
-                    {/* Terms and Conditions */}
-                    <View style={styles.termsSection}>
-                        <Text style={styles.termsTitle}>Terms & Conditions</Text>
-                        <Text style={styles.termItem}>
-                            • All disputes are subject to Vidisha jurisdiction only.
-                        </Text>
-                        <Text style={styles.termItem}>
-                            • Goods once sold will not be taken back or exchanged.
-                        </Text>
-                        <Text style={styles.termItem}>
-                            • Payment should be made within 30 days of invoice date.
-                        </Text>
-                        <Text style={styles.termItem}>
-                            • Interest @18% per annum will be charged on delayed payments.
-                        </Text>
-                        <Text style={styles.termItem}>
-                            • Subject to terms and conditions as per our standard policy.
-                        </Text>
                     </View>
 
                     {/* Footer Note */}

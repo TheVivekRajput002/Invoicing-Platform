@@ -1080,10 +1080,10 @@ const InvoiceGenerator = () => {
 
                     {/* Total Section */}
                     <div className="p-6 bg-gray-50 border-t-2 border-gray-300">
-                        <div className=" space-y-6">
+                        <div className=" space-y-6 flex flex-col items-end">
 
                             {/* Totals */}
-                            <div className="space-y-2">
+                            <div className="space-y-2 w-[50%]">
                                 <div className="flex justify-between items-center py-2 border-b border-gray-300">
                                     <span className="text-sm font-semibold text-gray-700">Subtotal:</span>
                                     <span className="text-base font-semibold text-gray-900">₹{calculateSubtotal().toFixed(2)}</span>
@@ -1097,20 +1097,20 @@ const InvoiceGenerator = () => {
                                     <span className="text-2xl font-bold">₹{calculateGrandTotal().toFixed(2)}</span>
                                 </div>
 
-                                {/* Payment Mode */}
-                                <div className='mt-8'>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Mode</label>
-                                    <select
-                                        value={paymentMode}
-                                        onChange={(e) => setPaymentMode(e.target.value)}
-                                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-medium"
-                                    >
-                                        <option value="unpaid">Unpaid</option>
-                                        <option value="cash">Cash</option>
-                                        <option value="online">Online</option>
-                                    </select>
-                                </div>
 
+                            </div>
+                            {/* Payment Mode */}
+                            <div className='mt-6 w-[60%]'>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Mode</label>
+                                <select
+                                    value={paymentMode}
+                                    onChange={(e) => setPaymentMode(e.target.value)}
+                                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-medium"
+                                >
+                                    <option value="unpaid">Unpaid</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="online">Online</option>
+                                </select>
                             </div>
                         </div>
                     </div>
