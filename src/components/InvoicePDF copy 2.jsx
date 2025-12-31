@@ -4,12 +4,15 @@ import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/render
 // Create styles
 const styles = StyleSheet.create({
     page: {
-        padding: 15,
+        padding: 30,
         fontSize: 10,
         fontFamily: 'Helvetica',
     },
     // Header Section
     headerContainer: {
+        borderTop: 4,
+        borderBottom: 4,
+        borderColor: '#1f2937',
         marginBottom: 0,
     },
     headerGrid: {
@@ -83,8 +86,7 @@ const styles = StyleSheet.create({
     },
     // Customer Section
     customerSection: {
-        padding: 10,
-        paddingBottom: 10,
+        padding: 15,
         backgroundColor: '#eff6ff',
         borderBottom: 2,
         borderColor: '#d1d5db',
@@ -97,11 +99,8 @@ const styles = StyleSheet.create({
     },
     customerGrid: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 20,
-    },
-    customerColumn: {
-        width: '48%',
+        flexWrap: 'wrap',
+        gap: 10,
     },
     customerField: {
         width: '48%',
@@ -112,7 +111,6 @@ const styles = StyleSheet.create({
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
         marginBottom: 3,
-        width: '50%'
     },
     fieldValue: {
         fontSize: 9,
@@ -125,7 +123,7 @@ const styles = StyleSheet.create({
     },
     // Items Section
     itemsSection: {
-        padding: 10,
+        padding: 15,
     },
     table: {
         borderWidth: 2,
@@ -156,8 +154,10 @@ const styles = StyleSheet.create({
     col7: { width: '20%', textAlign: 'right' },
     // Total Section
     totalSection: {
-        padding: 8,
+        padding: 15,
         backgroundColor: '#f9fafb',
+        borderTop: 2,
+        borderColor: '#d1d5db',
     },
     totalGrid: {
         flexDirection: 'row',
@@ -205,17 +205,16 @@ const styles = StyleSheet.create({
         fontFamily: 'Helvetica-Bold',
     },
     paymentBadge: {
-        padding: 4,
+        padding: 3,
         backgroundColor: '#ffffff',
-        borderRadius: 3,
+        borderRadius: 4,
         borderWidth: 2,
         borderColor: '#e5e7eb',
-        width: '50%'
     },
     paymentBadgeInner: {
-        padding: 3,
-        borderRadius: 10,
-        fontSize: 8,
+        padding: 4,
+        borderRadius: 12,
+        fontSize: 9,
         fontFamily: 'Helvetica-Bold',
         textAlign: 'center',
     },
@@ -229,14 +228,15 @@ const styles = StyleSheet.create({
     },
     // Signature and Terms Section
     footerSection: {
-        padding: 8,
+        marginTop: 20,
+        padding: 12,
         borderTop: 2,
         borderColor: '#d1d5db',
     },
     signatureRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 10,
+        marginBottom: 15,
     },
     signatureBox: {
         width: '45%',
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
         fontSize: 9,
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
-        marginBottom: 20,
+        marginBottom: 30,
     },
     signatureLine: {
         borderTop: 1,
@@ -276,9 +276,9 @@ const styles = StyleSheet.create({
         paddingLeft: 10,
     },
     footerNote: {
-        marginTop: 8,
+        marginTop: 15,
         textAlign: 'center',
-        fontSize: 7,
+        fontSize: 8,
         color: '#9ca3af',
         fontStyle: 'italic',
     },
@@ -294,35 +294,16 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     paymentModeBelow: {
-        flexDirection: 'row',
-        width: '100%',
-        marginTop: 10,
+        width: '60%',
+        marginTop: 15,
         marginLeft: 'auto',
-        alignItems: 'center',
     },
     termsSectionInline: {
         padding: 10,
         backgroundColor: '#f9fafb',
         borderRadius: 4,
         borderWidth: 1,
-
         borderColor: '#e5e7eb',
-    },
-    customerInfoText: {
-        paddingLeft: 5,
-    },
-    customerTextLine: {
-        fontSize: 10,
-        marginBottom: 4,
-        color: '#111827',
-    },
-    customerLabel: {
-        fontFamily: 'Helvetica-Bold',
-        color: '#374151',
-    },
-    customerValue: {
-        fontFamily: 'Helvetica',
-        color: '#111827',
     },
 });
 
@@ -396,45 +377,46 @@ const InvoicePDF = ({ invoice, customer, products }) => {
 
                 {/* Customer Details */}
                 <View style={styles.customerSection}>
-                    <View style={styles.customerInfoText}>
-                        <View style={styles.customerGrid}>
-                            {/* Left Column */}
-                            <View style={styles.customerColumn}>
-                                <Text style={styles.customerTextLine}>
-                                    <Text style={styles.customerLabel}>Name: </Text>
-                                    <Text style={styles.customerValue}>{customer?.name || 'N/A'}</Text>
-                                </Text>
-                                <Text style={styles.customerTextLine}>
-                                    <Text style={styles.customerLabel}>Phone: </Text>
-                                    <Text style={styles.customerValue}>{customer?.phone_number || 'N/A'}</Text>
-                                </Text>
-                            </View>
-
-                            {/* Right Column */}
-                            <View style={styles.customerColumn}>
-                                <Text style={styles.customerTextLine}>
-                                    <Text style={styles.customerLabel}>Vehicle / Mechanic: </Text>
-                                    <Text style={styles.customerValue}>{customer?.vehicle || 'N/A'}</Text>
-                                </Text>
-                                <Text style={styles.customerTextLine}>
-                                    <Text style={styles.customerLabel}>Address: </Text>
-                                    <Text style={styles.customerValue}>{customer?.address || 'N/A'}</Text>
-                                </Text>
+                    <Text style={styles.sectionTitle}>BILL TO</Text>
+                    <View style={styles.customerGrid}>
+                        <View style={styles.customerField}>
+                            <Text style={styles.fieldLabel}>Customer Name</Text>
+                            <View style={styles.fieldValue}>
+                                <Text>{customer?.name || 'N/A'}</Text>
                             </View>
                         </View>
-
-                        {/* GSTIN - Full Width */}
+                        <View style={styles.customerField}>
+                            <Text style={styles.fieldLabel}>Phone Number</Text>
+                            <View style={styles.fieldValue}>
+                                <Text>{customer?.phone_number || 'N/A'}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.customerField}>
+                            <Text style={styles.fieldLabel}>Address</Text>
+                            <View style={styles.fieldValue}>
+                                <Text>{customer?.address || 'N/A'}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.customerField}>
+                            <Text style={styles.fieldLabel}>Vehicle Number</Text>
+                            <View style={styles.fieldValue}>
+                                <Text>{customer?.vehicle || 'N/A'}</Text>
+                            </View>
+                        </View>
                         {invoice.gstin && (
-                            <Text style={styles.customerTextLine}>
-                                <Text style={styles.customerLabel}>GSTIN: </Text>
-                                <Text style={styles.customerValue}>{invoice.gstin}</Text>
-                            </Text>
+                            <View style={[styles.customerField, { width: '100%' }]}>
+                                <Text style={styles.fieldLabel}>GSTIN</Text>
+                                <View style={styles.fieldValue}>
+                                    <Text>{invoice.gstin}</Text>
+                                </View>
+                            </View>
                         )}
                     </View>
                 </View>
 
                 {/* Items Table */}
                 <View style={styles.itemsSection}>
+                    <Text style={styles.sectionTitle}>ITEMS</Text>
                     <View style={styles.table}>
                         {/* Table Header */}
                         <View style={styles.tableHeader}>
@@ -527,10 +509,16 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                     {/* Signatures */}
                     <View style={styles.signatureRow}>
                         <View style={styles.signatureBox}>
-                            <Text style={styles.signatureText}>Customer Signature</Text>
+                            <Text style={styles.signatureLabel}>Customer Signature</Text>
+                            <View style={styles.signatureLine}>
+                                <Text style={styles.signatureText}>Signature & Date</Text>
+                            </View>
                         </View>
                         <View style={styles.signatureBox}>
-                            <Text style={styles.signatureText}>Authorized Signature</Text>
+                            <Text style={styles.signatureLabel}>Authorized Signatory</Text>
+                            <View style={styles.signatureLine}>
+                                <Text style={styles.signatureText}>For Shiv Shakti Automobile</Text>
+                            </View>
                         </View>
                     </View>
 
@@ -540,7 +528,7 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                     </Text>
                 </View>
             </Page>
-        </Document >
+        </Document>
     );
 };
 
