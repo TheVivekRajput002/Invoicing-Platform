@@ -228,6 +228,11 @@ const InvoiceGenerator = () => {
         }));
 
         setShowProductDropdown(prev => ({ ...prev, [productId]: false }));
+
+        // Focus back on the product name input after selection
+        setTimeout(() => {
+            inputRefs.current[`${productId}-productName`]?.focus();
+        }, 0);
     };
 
     const handleCustomerChange = (field, value) => {
@@ -486,16 +491,40 @@ const InvoiceGenerator = () => {
 
     // Handle keyboard navigation
     const handleKeyDown = (e, currentKey, productId = null) => {
-        if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        // For number inputs (quantity, rate, gstPercentage), allow up/down to increase/decrease
+        const isNumberField = currentKey.includes('quantity') ||
+            currentKey.includes('rate') ||
+            currentKey.includes('gstPercentage');
+
+        if (isNumberField && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault();
+            const input = inputRefs.current[currentKey];
+            const currentValue = parseFloat(input.value) || 0;
+            const step = currentKey.includes('gstPercentage') ? 1 : (currentKey.includes('quantity') ? 1 : 10);
+
+            if (e.key === 'ArrowUp') {
+                input.value = currentValue + step;
+            } else {
+                input.value = Math.max(0, currentValue - step);
+            }
+
+            // Trigger onChange event
+            const event = new Event('input', { bubbles: true });
+            input.dispatchEvent(event);
+            return;
+        }
+
+        // Navigation with Enter, Left, Right arrows
+        if (e.key === 'Enter' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             e.preventDefault();
 
             const keys = Object.keys(inputRefs.current);
             const currentIndex = keys.indexOf(currentKey);
 
             let nextIndex;
-            if (e.key === 'Enter' || e.key === 'ArrowDown') {
+            if (e.key === 'Enter' || e.key === 'ArrowRight') {
                 nextIndex = currentIndex + 1;
-            } else if (e.key === 'ArrowUp') {
+            } else if (e.key === 'ArrowLeft') {
                 nextIndex = currentIndex - 1;
             }
 
@@ -506,7 +535,6 @@ const InvoiceGenerator = () => {
             } else if (e.key === 'Enter' && nextIndex >= keys.length) {
                 // If we're at the end and user presses Enter, add new product
                 addProduct();
-                // Focus will automatically go to the first field of new product
                 setTimeout(() => {
                     const newProductKey = Object.keys(inputRefs.current).find(key =>
                         key.includes(`-productName`) &&
@@ -518,6 +546,7 @@ const InvoiceGenerator = () => {
                 }, 100);
             }
         }
+
 
 
 
@@ -820,7 +849,10 @@ const InvoiceGenerator = () => {
                                                                 {productSearchResults[product.id].map((item) => (
                                                                     <div
                                                                         key={item.id}
-                                                                        onClick={() => handleProductSelect(product.id, item)}
+                                                                        onMouseDown={(e) => {
+                                                                            e.preventDefault();  // Prevents input blur
+                                                                            handleProductSelect(product.id, item);
+                                                                        }}
                                                                         className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
                                                                     >
                                                                         <div className="flex justify-between items-start">
@@ -1048,20 +1080,7 @@ const InvoiceGenerator = () => {
 
                     {/* Total Section */}
                     <div className="p-6 bg-gray-50 border-t-2 border-gray-300">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Payment Mode */}
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Mode</label>
-                                <select
-                                    value={paymentMode}
-                                    onChange={(e) => setPaymentMode(e.target.value)}
-                                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-medium"
-                                >
-                                    <option value="unpaid">Unpaid</option>
-                                    <option value="cash">Cash</option>
-                                    <option value="online">Online</option>
-                                </select>
-                            </div>
+                        <div className=" space-y-6">
 
                             {/* Totals */}
                             <div className="space-y-2">
@@ -1077,6 +1096,21 @@ const InvoiceGenerator = () => {
                                     <span className="text-lg font-bold">GRAND TOTAL:</span>
                                     <span className="text-2xl font-bold">₹{calculateGrandTotal().toFixed(2)}</span>
                                 </div>
+
+                                {/* Payment Mode */}
+                                <div className='mt-8'>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Mode</label>
+                                    <select
+                                        value={paymentMode}
+                                        onChange={(e) => setPaymentMode(e.target.value)}
+                                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-medium"
+                                    >
+                                        <option value="unpaid">Unpaid</option>
+                                        <option value="cash">Cash</option>
+                                        <option value="online">Online</option>
+                                    </select>
+                                </div>
+
                             </div>
                         </div>
                     </div>
