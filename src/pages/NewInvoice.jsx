@@ -16,6 +16,11 @@ const InvoiceGenerator = () => {
     const [gstIncluded, setGstIncluded] = useState(false); // false = without GST, true = with GST
     const [invoiceSaved, setInvoiceSaved] = useState(false);
     const [savedInvoiceData, setSavedInvoiceData] = useState(null);
+    // NEW: Product search states
+    const [productSearchResults, setProductSearchResults] = useState({});
+    const [showProductDropdown, setShowProductDropdown] = useState({});
+    const [searchingProduct, setSearchingProduct] = useState({});
+    const [autoSavedProducts, setAutoSavedProducts] = useState(new Set());
 
 
     // Refs for keyboard navigation
@@ -52,14 +57,23 @@ const InvoiceGenerator = () => {
 
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        // Set default dates
-        const today = new Date();
-        const due = new Date(today);
-        due.setDate(today.getDate() + 30);
+    // Add this helper function at the top of your component (after imports, before the component)
+    const getISTDate = (daysOffset = 0) => {
+        const now = new Date();
+        // Convert to IST (UTC+5:30)
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const istTime = new Date(now.getTime() + istOffset);
 
-        setInvoiceDate(today.toISOString().split('T')[0]);
-        setDueDate(due.toISOString().split('T')[0]);
+        if (daysOffset !== 0) {
+            istTime.setDate(istTime.getDate() + daysOffset);
+        }
+
+        return istTime.toISOString().split('T')[0];
+    };
+
+    useEffect(() => {
+        setInvoiceDate(getISTDate(0)); // Today in IST
+        setDueDate(getISTDate(30));     // 30 days from today in IST
     }, []);
 
     // Auto-search customer by phone number
@@ -141,6 +155,81 @@ const InvoiceGenerator = () => {
         }
     };
 
+    // Fetch products for autocomplete
+    const searchProductsFromDB = async (searchQuery, productId) => {
+        if (!searchQuery || searchQuery.length < 2) {
+            setProductSearchResults(prev => ({ ...prev, [productId]: [] }));
+            return;
+        }
+
+        setSearchingProduct(prev => ({ ...prev, [productId]: true }));
+
+        try {
+            const { data, error } = await supabase
+                .from('products')
+                .select('*')
+                .or(`product_name.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%`)
+                .limit(10);
+
+            if (error) throw error;
+
+            setProductSearchResults(prev => ({
+                ...prev,
+                [productId]: data || []
+            }));
+        } catch (error) {
+            console.error('Error searching products:', error);
+            setProductSearchResults(prev => ({ ...prev, [productId]: [] }));
+        } finally {
+            setSearchingProduct(prev => ({ ...prev, [productId]: false }));
+        }
+    };
+
+    // Debounced product search
+    useEffect(() => {
+        const timers = {};
+
+        products.forEach(product => {
+            if (product.productName && product.productName.length >= 2) {
+                timers[product.id] = setTimeout(() => {
+                    searchProductsFromDB(product.productName, product.id);
+                }, 300);
+            }
+        });
+
+        return () => {
+            Object.values(timers).forEach(timer => clearTimeout(timer));
+        };
+    }, [products.map(p => p.productName).join(',')]);
+
+    // Handle product selection from dropdown
+    const handleProductSelect = (productId, selectedProduct) => {
+        setProducts(prev => prev.map(product => {
+            if (product.id === productId) {
+                const updated = {
+                    ...product,
+                    productName: selectedProduct.product_name,
+                    hsnCode: selectedProduct.hsn_code,
+                    rate: selectedProduct.base_rate,
+                    gstPercentage: selectedProduct.gst_rate || 18
+                };
+
+                // Recalculate total with new rate
+                updated.totalAmount = calculateProductTotal(
+                    updated.quantity,
+                    updated.rate,
+                    updated.gstPercentage,
+                    gstIncluded
+                );
+
+                return updated;
+            }
+            return product;
+        }));
+
+        setShowProductDropdown(prev => ({ ...prev, [productId]: false }));
+    };
+
     const handleCustomerChange = (field, value) => {
         setCustomerDetails(prev => ({
             ...prev,
@@ -166,6 +255,14 @@ const InvoiceGenerator = () => {
         setProducts(prev => prev.map(product => {
             if (product.id === id) {
                 const updated = { ...product, [field]: value };
+
+                // Show dropdown for product name search
+                if (field === 'productName') {
+                    setShowProductDropdown(prev => ({
+                        ...prev,
+                        [id]: value.length >= 2
+                    }));
+                }
 
                 if (['quantity', 'rate', 'gstPercentage'].includes(field)) {
                     updated.totalAmount = calculateProductTotal(
@@ -219,6 +316,47 @@ const InvoiceGenerator = () => {
 
     const calculateGrandTotal = () => {
         return products.reduce((sum, product) => sum + product.totalAmount, 0);
+    };
+
+    // Auto-save new product to database
+    const autoSaveNewProduct = async (product) => {
+
+        if (!product.productName || !product.hsnCode || !product.rate) {
+            return; // Don't save incomplete products
+        }
+
+        try {
+            // Check if product already exists
+            const { data: existing } = await supabase
+                .from('products')
+                .select('id')
+                .eq('product_name', product.productName)
+                .maybeSingle();
+
+            if (existing) {
+                return; // Product already exists
+            }
+
+            // Insert new product
+            const { error } = await supabase
+                .from('products')
+                .insert([{
+                    product_name: product.productName,
+                    hsn_code: product.hsnCode,
+                    base_rate: product.rate,
+                    purchase_rate: product.rate * 0.8, // Estimate 20% margin
+                    gst_rate: product.gstPercentage,
+                    current_stock: 0,
+                    minimum_stock: 5
+                }]);
+
+            if (error) throw error;
+
+            console.log('New product auto-saved:', product.productName);
+            setAutoSavedProducts(prev => new Set([...prev, product.productName]));
+        } catch (error) {
+            console.error('Error auto-saving product:', error);
+        }
     };
 
     const saveInvoice = async () => {
@@ -365,8 +503,23 @@ const InvoiceGenerator = () => {
             if (nextIndex >= 0 && nextIndex < keys.length) {
                 const nextKey = keys[nextIndex];
                 inputRefs.current[nextKey]?.focus();
+            } else if (e.key === 'Enter' && nextIndex >= keys.length) {
+                // If we're at the end and user presses Enter, add new product
+                addProduct();
+                // Focus will automatically go to the first field of new product
+                setTimeout(() => {
+                    const newProductKey = Object.keys(inputRefs.current).find(key =>
+                        key.includes(`-productName`) &&
+                        !keys.includes(key)
+                    );
+                    if (newProductKey) {
+                        inputRefs.current[newProductKey]?.focus();
+                    }
+                }, 100);
             }
         }
+
+
 
         // Tab through product fields horizontally with Arrow Right/Left
         if (productId && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
@@ -387,6 +540,19 @@ const InvoiceGenerator = () => {
             inputRefs.current[nextKey]?.focus();
         }
     };
+
+    // Add keyboard shortcut: Ctrl+Enter or Cmd+Enter to add new product row
+    useEffect(() => {
+        const handleGlobalKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                addProduct();
+            }
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [products]);
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-8">
@@ -587,108 +753,167 @@ const InvoiceGenerator = () => {
                         <h3 className="text-lg font-bold text-gray-800 mb-4">ITEMS</h3>
 
                         {/* Desktop Table View */}
-                        {/* Desktop Table View */}
-                        <div className="hidden md:block overflow-x-auto border-2 border-gray-300 rounded-lg">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="bg-gray-800 text-white">
-                                        <th className="px-4 py-3 text-left text-sm font-semibold w-16">S.No</th>
-                                        <th className="px-4 py-3 text-left text-sm font-semibold min-w-[200px]">Product Name</th>
-                                        <th className="px-4 py-3 text-left text-sm font-semibold w-32">HSN</th>
-                                        <th className="px-4 py-3 text-center text-sm font-semibold w-24">Qty</th>
-                                        <th className="px-4 py-3 text-right text-sm font-semibold w-32">
-                                            <div className="flex flex-col items-end gap-1">
-                                                <span>Rate</span>
-                                                <button
-                                                    onClick={() => setGstIncluded(!gstIncluded)}
-                                                    className={`text-xs px-2 py-1 rounded transition-colors ${gstIncluded
-                                                        ? 'bg-green-500 text-white'
-                                                        : 'bg-gray-600 text-white'
-                                                        }`}
-                                                >
-                                                    {gstIncluded ? 'With GST' : 'Without GST'}
-                                                </button>
-                                            </div>
-                                        </th>
-                                        <th className="px-4 py-3 text-center text-sm font-semibold w-24">GST %</th>
-                                        <th className="px-4 py-3 text-right text-sm font-semibold w-32">Amount</th>
-                                        <th className="px-4 py-3 text-center text-sm font-semibold w-20">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {products.map((product, index) => (
-                                        <tr key={product.id} className="border-b border-gray-300 hover:bg-gray-50">
-                                            <td className="px-4 py-3 text-sm text-center">{index + 1}</td>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    ref={(el) => setInputRef(`${product.id}-productName`, el)}
-                                                    type="text"
-                                                    value={product.productName}
-                                                    onChange={(e) => handleProductChange(product.id, 'productName', e.target.value)}
-                                                    onKeyDown={(e) => handleKeyDown(e, `${product.id}-productName`, product.id)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
-                                                    placeholder="Product name"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    ref={(el) => setInputRef(`${product.id}-hsnCode`, el)}
-                                                    type="text"
-                                                    value={product.hsnCode}
-                                                    onChange={(e) => handleProductChange(product.id, 'hsnCode', e.target.value)}
-                                                    onKeyDown={(e) => handleKeyDown(e, `${product.id}-hsnCode`, product.id)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
-                                                    placeholder="HSN"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    ref={(el) => setInputRef(`${product.id}-quantity`, el)}
-                                                    type="number"
-                                                    value={product.quantity}
-                                                    onChange={(e) => handleProductChange(product.id, 'quantity', parseFloat(e.target.value) || 0)}
-                                                    onKeyDown={(e) => handleKeyDown(e, `${product.id}-quantity`, product.id)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    ref={(el) => setInputRef(`${product.id}-rate`, el)}
-                                                    type="number"
-                                                    value={product.rate}
-                                                    onChange={(e) => handleProductChange(product.id, 'rate', parseFloat(e.target.value) || 0)}
-                                                    onKeyDown={(e) => handleKeyDown(e, `${product.id}-rate`, product.id)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-right"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    ref={(el) => setInputRef(`${product.id}-gstPercentage`, el)}
-                                                    type="number"
-                                                    value={product.gstPercentage}
-                                                    onChange={(e) => handleProductChange(product.id, 'gstPercentage', parseFloat(e.target.value) || 0)}
-                                                    onKeyDown={(e) => handleKeyDown(e, `${product.id}-gstPercentage`, product.id)}
-                                                    disabled={gstIncluded}
-                                                    className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center ${gstIncluded ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
-                                                        }`}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-sm font-semibold text-right">
-                                                ₹{product.totalAmount.toFixed(2)}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <button
-                                                    onClick={() => removeProduct(product.id)}
-                                                    className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors"
-                                                    disabled={products.length === 1}
-                                                >
-                                                    <Trash2 className="w-5 h-5" />
-                                                </button>
-                                            </td>
+                        <div className="hidden md:block">
+                            <div className="border-2 border-gray-300 rounded-lg" style={{ overflow: 'visible' }}>
+                                <table className="w-full" style={{ overflow: 'visible' }}>
+                                    <thead>
+                                        <tr className="bg-gray-800 text-white">
+                                            <th className="px-4 py-3 text-left text-sm font-semibold w-16">S.No</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold min-w-[200px]">Product Name</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold w-32">HSN</th>
+                                            <th className="px-4 py-3 text-center text-sm font-semibold w-24">Qty</th>
+                                            <th className="px-4 py-3 text-right text-sm font-semibold w-32">
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span>Rate</span>
+                                                    <button
+                                                        onClick={() => setGstIncluded(!gstIncluded)}
+                                                        className={`text-xs px-2 py-1 rounded transition-colors ${gstIncluded
+                                                            ? 'bg-green-500 text-white'
+                                                            : 'bg-gray-600 text-white'
+                                                            }`}
+                                                    >
+                                                        {gstIncluded ? 'With GST' : 'Without GST'}
+                                                    </button>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-center text-sm font-semibold w-24">GST %</th>
+                                            <th className="px-4 py-3 text-right text-sm font-semibold w-32">Amount</th>
+                                            <th className="px-4 py-3 text-center text-sm font-semibold w-20">Action</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+
+                                    <tbody>
+                                        {products.map((product, index) => (
+                                            <tr key={product.id} className="border-b border-gray-300 hover:bg-gray-50">
+                                                <td className="px-4 py-3 text-sm text-center">{index + 1}</td>
+                                                <td className="px-4 py-3" style={{ position: 'relative' }}>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <input
+                                                            ref={(el) => setInputRef(`${product.id}-productName`, el)}
+                                                            type="text"
+                                                            value={product.productName}
+                                                            onChange={(e) => handleProductChange(product.id, 'productName', e.target.value)}
+                                                            onKeyDown={(e) => handleKeyDown(e, `${product.id}-productName`, product.id)}
+                                                            onBlur={() => {
+                                                                setTimeout(() => {
+                                                                    setShowProductDropdown(prev => ({ ...prev, [product.id]: false }));
+                                                                    if (product.productName && product.hsnCode && product.rate) {
+                                                                        autoSaveNewProduct(product);
+                                                                    }
+                                                                }, 200);
+                                                            }}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            placeholder="Start typing product name..."
+                                                        />
+
+                                                        {/* Dropdown - FIXED positioning */}
+                                                        {showProductDropdown[product.id] && productSearchResults[product.id]?.length > 0 && (
+                                                            <div
+                                                                className="absolute bg-white border-2 border-gray-300 rounded-lg shadow-2xl max-h-60 overflow-y-auto"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    top: 'calc(100% + 4px)',  // Position just below the input
+                                                                    left: 0,
+                                                                    zIndex: 9999
+                                                                }}
+                                                            >
+                                                                {productSearchResults[product.id].map((item) => (
+                                                                    <div
+                                                                        key={item.id}
+                                                                        onClick={() => handleProductSelect(product.id, item)}
+                                                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
+                                                                    >
+                                                                        <div className="flex justify-between items-start">
+                                                                            <div className="flex-1">
+                                                                                <p className="font-semibold text-sm text-gray-900">
+                                                                                    {item.product_name}
+                                                                                </p>
+                                                                                <div className="flex gap-3 mt-1">
+                                                                                    <span className="text-xs text-gray-600">
+                                                                                        HSN: {item.hsn_code}
+                                                                                    </span>
+                                                                                    <span className="text-xs text-gray-600">
+                                                                                        GST: {item.gst_rate}%
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <span className="text-sm font-bold text-blue-600">
+                                                                                ₹{item.base_rate}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Loading indicator */}
+                                                        {searchingProduct[product.id] && (
+                                                            <div className="absolute right-3 top-3">
+                                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        ref={(el) => setInputRef(`${product.id}-hsnCode`, el)}
+                                                        type="text"
+                                                        value={product.hsnCode}
+                                                        onChange={(e) => handleProductChange(product.id, 'hsnCode', e.target.value)}
+                                                        onKeyDown={(e) => handleKeyDown(e, `${product.id}-hsnCode`, product.id)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                                                        placeholder="HSN"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        ref={(el) => setInputRef(`${product.id}-quantity`, el)}
+                                                        type="number"
+                                                        value={product.quantity}
+                                                        onChange={(e) => handleProductChange(product.id, 'quantity', parseFloat(e.target.value) || 0)}
+                                                        onKeyDown={(e) => handleKeyDown(e, `${product.id}-quantity`, product.id)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        ref={(el) => setInputRef(`${product.id}-rate`, el)}
+                                                        type="number"
+                                                        value={product.rate}
+                                                        onChange={(e) => handleProductChange(product.id, 'rate', parseFloat(e.target.value) || 0)}
+                                                        onKeyDown={(e) => handleKeyDown(e, `${product.id}-rate`, product.id)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-right"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        ref={(el) => setInputRef(`${product.id}-gstPercentage`, el)}
+                                                        type="number"
+                                                        value={product.gstPercentage}
+                                                        onChange={(e) => handleProductChange(product.id, 'gstPercentage', parseFloat(e.target.value) || 0)}
+                                                        onKeyDown={(e) => handleKeyDown(e, `${product.id}-gstPercentage`, product.id)}
+                                                        disabled={gstIncluded}
+                                                        className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center ${gstIncluded ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                                                            }`}
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-right">
+                                                    ₹{product.totalAmount.toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <button
+                                                        onClick={() => removeProduct(product.id)}
+                                                        className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors"
+                                                        disabled={products.length === 1}
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         {/* Mobile Cards View */}
@@ -721,17 +946,40 @@ const InvoiceGenerator = () => {
                                     </div>
 
                                     <div className="space-y-3">
-                                        <div>
+                                        <div className="relative">
                                             <label className="block text-sm font-semibold text-gray-700 mb-1">Product Name</label>
                                             <input
                                                 type="text"
                                                 value={product.productName}
                                                 onChange={(e) => handleProductChange(product.id, 'productName', e.target.value)}
+                                                onBlur={() => {
+                                                    setTimeout(() => {
+                                                        setShowProductDropdown(prev => ({ ...prev, [product.id]: false }));
+                                                        if (product.productName && product.hsnCode && product.rate) {
+                                                            autoSaveNewProduct(product);
+                                                        }
+                                                    }, 200);
+                                                }}
                                                 className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="Product name"
+                                                placeholder="Start typing product name..."
                                             />
-                                        </div>
 
+                                            {/* Mobile dropdown */}
+                                            {showProductDropdown[product.id] && productSearchResults[product.id]?.length > 0 && (
+                                                <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                                    {productSearchResults[product.id].map((item) => (
+                                                        <div
+                                                            key={item.id}
+                                                            onClick={() => handleProductSelect(product.id, item)}
+                                                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b"
+                                                        >
+                                                            <p className="font-semibold text-sm">{item.product_name}</p>
+                                                            <p className="text-xs text-gray-600">₹{item.base_rate} • HSN: {item.hsn_code}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-sm font-semibold text-gray-700 mb-1">HSN Code</label>
