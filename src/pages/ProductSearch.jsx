@@ -59,6 +59,28 @@ const ProductSearch = () => {
         }
     };
 
+    const updateStock = async (productId, newStock) => {
+        try {
+            const { error } = await supabase
+                .from('products')
+                .update({ current_stock: newStock })
+                .eq('id', productId);
+
+            if (error) throw error;
+
+            // Update local state
+            setProducts(prev => prev.map(p =>
+                p.id === productId ? { ...p, current_stock: newStock } : p
+            ));
+
+            setSelectedProduct(prev => ({ ...prev, current_stock: newStock }));
+
+        } catch (error) {
+            console.error('Error updating stock:', error);
+            alert('Failed to update stock');
+        }
+    };
+
     const applyFilters = () => {
         let filtered = [...products];
 
@@ -210,11 +232,35 @@ const ProductSearch = () => {
 
                 {/* Stock Section */}
                 <div className="border-t border-gray-200 pt-4">
-                    <h3 className="font-semibold mb-3">Stock Status</h3>
+                    <h3 className="font-semibold mb-3">Stock Management</h3>
                     <div className="space-y-3">
                         <div className="p-3 bg-blue-50 rounded-lg">
-                            <p className="text-sm text-gray-600">Current Stock</p>
-                            <p className="text-2xl font-bold text-blue-600">{product.current_stock}</p>
+                            <p className="text-sm text-gray-600 mb-2">Current Stock</p>
+                            <div className="flex items-center justify-between">
+                                <p className="text-2xl font-bold text-blue-600">{product.current_stock}</p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (product.current_stock > 0) {
+                                                updateStock(product.id, product.current_stock - 1);
+                                            }
+                                        }}
+                                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors font-bold"
+                                    >
+                                        -
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            updateStock(product.id, product.current_stock + 1);
+                                        }}
+                                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors font-bold"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div className="p-3 bg-orange-50 rounded-lg">
                             <p className="text-sm text-gray-600">Minimum Stock</p>
@@ -315,11 +361,10 @@ const ProductSearch = () => {
                         <div className="flex items-end">
                             <button
                                 onClick={() => setShowLowStockOnly(!showLowStockOnly)}
-                                className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                                    showLowStockOnly
-                                        ? 'bg-orange-600 text-white hover:bg-orange-700'
-                                        : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                                }`}
+                                className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${showLowStockOnly
+                                    ? 'bg-orange-600 text-white hover:bg-orange-700'
+                                    : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                    }`}
                             >
                                 <AlertTriangle size={18} />
                                 {showLowStockOnly ? 'Showing Low Stock' : 'Show Low Stock'}
@@ -380,11 +425,10 @@ const ProductSearch = () => {
                                             <div
                                                 key={product.id}
                                                 onClick={() => handleProductClick(product)}
-                                                className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                                                    selectedProduct?.id === product.id
-                                                        ? 'border-purple-500 bg-purple-50 shadow-md'
-                                                        : 'border-gray-200 hover:border-purple-300 hover:shadow-sm'
-                                                } ${isLowStock ? 'border-l-4 border-l-orange-500' : ''}`}
+                                                className={`p-4 border rounded-lg cursor-pointer transition-all ${selectedProduct?.id === product.id
+                                                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                                                    : 'border-gray-200 hover:border-purple-300 hover:shadow-sm'
+                                                    } ${isLowStock ? 'border-l-4 border-l-orange-500' : ''}`}
                                             >
                                                 <div className="flex items-start justify-between mb-2">
                                                     <div className="flex-1">
