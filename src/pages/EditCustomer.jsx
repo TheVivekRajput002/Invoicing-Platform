@@ -62,7 +62,7 @@ const EditCustomer = () => {
                     <div className="flex items-center justify-between mb-6">
                         <h1 className="text-2xl font-bold text-gray-900">Edit Customer</h1>
                         <button
-                            onClick={() => navigate('/customer/search')}
+                            onClick={() => navigate(-1)}
                             className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
                         >
                             <ArrowLeft size={20} />
@@ -122,7 +122,7 @@ const EditCustomer = () => {
 
                     <div className="mt-6 flex justify-end gap-4">
                         <button
-                            onClick={() => navigate('/search')}
+                            onClick={() => navigate(-1)}
                             className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                         >
                             Cancel
