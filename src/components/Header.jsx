@@ -19,7 +19,7 @@ const Header = () => {
   const navItems = [
     { name: 'Home', to: '/', icon: Home },
     { name: 'Billing', to: '/billing', icon: ReceiptIndianRupee },
-    { name: 'Customer', to: '/customer/search', icon: BookUser },
+    { name: 'Customer', to: '/customer', icon: BookUser },
     { name: 'Inventory', to: '/product', icon: PackageSearch },
     { name: 'Staff', to: '/staff', icon: PersonStanding },
     { name: 'Data', to: '/data', icon: ChartNoAxesCombined },

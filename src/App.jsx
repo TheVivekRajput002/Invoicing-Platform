@@ -16,6 +16,8 @@ import Product from './pages/Product';
 import TestPage from './pages/TestPage';
 import ProductViewEdit from './pages/ProductViewEdit'
 import CustomerViewEdit from './pages/CustomerViewEdit'
+import Customer from './pages/Customer'
+import CustomerAdd from './pages/CustomerAdd'
 
 function App() {
   return (
@@ -29,17 +31,17 @@ function App() {
           <Routes>
             <Route path='/' element={<Home />} />
             <Route path='/billing' element={<Billing />} />
+            <Route path='/customer' element={<Customer />} />
             <Route path='/customer/search' element={<CustomerSearch />} />
+            <Route path='/customer/add' element={<CustomerAdd />} />
             <Route path='/product/search' element={<ProductSearch />} />
             <Route path='/data' element={<Data />} />
             <Route path='/staff' element={<StaffManage />} />
             <Route path='/product/add' element={<ProductAdd />} />
             <Route path='/product' element={<Product />} />
-            {/* <Route path='/search' element={<Search />} /> */}
 
             <Route path='/billing/invoice/search' element={<InvoiceSearch />} />
             <Route path='/billing/invoice/new' element={<NewInvoice />} />
-            {/* <Route path='/customer' element={<Customer />} /> */}
 
             <Route path='/billing/invoice/:id' element={<ViewEditInvoice />} />
             <Route path='/customer/edit/:id' element={<EditCustomer />} />
