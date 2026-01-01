@@ -14,6 +14,7 @@ import StaffManage from './pages/StaffManage';
 import ProductAdd from './pages/ProductAdd';
 import Product from './pages/Product';
 import TestPage from './pages/TestPage';
+import ProductViewEdit from './pages/ProductViewEdit'
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Route path='/billing/invoice/:id' element={<ViewEditInvoice />} />
             <Route path='/customer/edit/:id' element={<EditCustomer />} />
             <Route path='/test' element={<TestPage />} />
+            <Route path="/product/:productId" element={<ProductViewEdit />} />
 
           </Routes>
         </main>

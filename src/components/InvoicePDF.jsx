@@ -390,6 +390,17 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                                     {new Date(invoice.created_at).toLocaleString('en-IN')}
                                 </Text>
                             </View>
+
+                            {/* GSTIN - Full Width */}
+                            {invoice.gstin && (
+                                <View style={styles.invoiceDetailsRow}>
+                                    <Text style={styles.invoiceLabel}>GSTIN: </Text>
+                                    <Text style={styles.invoiceValue}>
+                                        {invoice.gstin}
+                                    </Text>
+                                </View>
+                            )}
+                            
                         </View>
                     </View>
                 </View>
@@ -423,13 +434,6 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                             </View>
                         </View>
 
-                        {/* GSTIN - Full Width */}
-                        {invoice.gstin && (
-                            <Text style={styles.customerTextLine}>
-                                <Text style={styles.customerLabel}>GSTIN: </Text>
-                                <Text style={styles.customerValue}>{invoice.gstin}</Text>
-                            </Text>
-                        )}
                     </View>
                 </View>
 

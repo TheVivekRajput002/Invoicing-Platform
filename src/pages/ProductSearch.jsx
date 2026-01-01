@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Package, Filter, X, TrendingUp, AlertTriangle, Tag } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 const ProductSearch = () => {
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [showModal, setShowModal] = useState(false);
     const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+    const navigate = useNavigate();
 
     // Filter states
     const [filters, setFilters] = useState({
@@ -58,6 +59,7 @@ const ProductSearch = () => {
             setLoading(false);
         }
     };
+
 
     const updateStock = async (productId, newStock) => {
         try {
@@ -135,148 +137,9 @@ const ProductSearch = () => {
     const hasActiveFilters = Object.values(filters).some(v => v !== '') || showLowStockOnly;
 
     const handleProductClick = (product) => {
-        setSelectedProduct(product);
-        setShowModal(true);
+        navigate(`/product/${product.id}`);
     };
 
-    const closeModal = () => {
-        setShowModal(false);
-    };
-
-    // Product Details Component (reusable for both modal and sidebar)
-    const ProductDetails = ({ product, isModal = false }) => (
-        <div className={`bg-white rounded-lg ${isModal ? '' : 'shadow-md'} p-6`}>
-            {isModal && (
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold flex items-center gap-2">
-                        <Tag className="text-purple-600" size={24} />
-                        Product Details
-                    </h2>
-                    <button
-                        onClick={closeModal}
-                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    >
-                        <X size={24} />
-                    </button>
-                </div>
-            )}
-
-            {!isModal && (
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                    <Tag className="text-purple-600" size={24} />
-                    Product Details
-                </h2>
-            )}
-
-            <div className="space-y-4">
-                <div>
-                    <p className="text-sm text-gray-600">Product Name</p>
-                    <p className="font-semibold text-lg">{product.product_name}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <p className="text-sm text-gray-600">Brand</p>
-                        <p className="font-medium">{product.brand || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-600">SKU</p>
-                        <p className="font-medium">{product.id}</p>
-                    </div>
-                </div>
-
-                <div>
-                    <p className="text-sm text-gray-600">Vehicle Model</p>
-                    <p className="font-medium">{product.vehicle_model || 'N/A'}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <p className="text-sm text-gray-600">HSN Code</p>
-                        <p className="font-medium">{product.hsn_code}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-600">GST Rate</p>
-                        <p className="font-medium">{product.gst_rate}%</p>
-                    </div>
-                </div>
-
-                {/* Pricing Section */}
-                <div className="border-t border-gray-200 pt-4">
-                    <h3 className="font-semibold mb-3">Pricing</h3>
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">Purchase Rate:</span>
-                            <span className="font-medium">₹{product.purchase_rate.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">GST Amount:</span>
-                            <span className="font-medium text-blue-600">₹{product.gst_rate.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">Selling Rate:</span>
-                            <span className="font-medium">₹{product.base_rate.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">Discount:</span>
-                            <span className="font-medium">{product.discount}%</span>
-                        </div>
-                        <div className="flex justify-between pt-2 border-t border-gray-200">
-                            <span className="text-gray-600">Profit Margin:</span>
-                            <span className="font-bold text-green-600">
-                                ₹{(product.base_rate - product.purchase_rate).toFixed(2)}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Stock Section */}
-                <div className="border-t border-gray-200 pt-4">
-                    <h3 className="font-semibold mb-3">Stock Management</h3>
-                    <div className="space-y-3">
-                        <div className="p-3 bg-blue-50 rounded-lg">
-                            <p className="text-sm text-gray-600 mb-2">Current Stock</p>
-                            <div className="flex items-center justify-between">
-                                <p className="text-2xl font-bold text-blue-600">{product.current_stock}</p>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (product.current_stock > 0) {
-                                                updateStock(product.id, product.current_stock - 1);
-                                            }
-                                        }}
-                                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors font-bold"
-                                    >
-                                        -
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            updateStock(product.id, product.current_stock + 1);
-                                        }}
-                                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors font-bold"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-3 bg-orange-50 rounded-lg">
-                            <p className="text-sm text-gray-600">Minimum Stock</p>
-                            <p className="text-2xl font-bold text-orange-600">{product.minimum_stock}</p>
-                        </div>
-                        {product.current_stock <= product.minimum_stock && (
-                            <div className="p-3 bg-red-50 rounded-lg flex items-center gap-2">
-                                <AlertTriangle className="text-red-600" size={20} />
-                                <p className="text-sm font-medium text-red-600">Low stock alert!</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -489,15 +352,6 @@ const ProductSearch = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Mobile Modal for Product Details */}
-            {showModal && selectedProduct && (
-                <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
-                    <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto animate-slide-up">
-                        <ProductDetails product={selectedProduct} isModal={true} />
-                    </div>
-                </div>
-            )}
 
             <style>{`
                 @keyframes slide-up {

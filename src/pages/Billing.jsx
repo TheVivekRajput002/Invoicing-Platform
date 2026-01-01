@@ -7,13 +7,14 @@ const Billing = () => {
   const navigate = useNavigate();
 
   return (
-    <div className='pl-13 w-[80%]'>
+    <div className='flex flex-col items-center'>
+    <div className=''>
 
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6 mt-8">Billing</h1>
+      <div className=" mx-auto">
+        <h1 className="text-4xl text-center font-bold text-gray-900 mt-8">Billing</h1>
 
-        <div className='border border-gray-600 py-6 px-8 w-fit gap-3 flex flex-col rounded-md'>
-          <p className='font-semibold text-3xl'>Invoice</p>
+        <div className='border mt-10 border-gray-600 py-6 px-8 w-fit gap-3 flex flex-col rounded-md'>
+          <p className='font-semibold text-3xl'>INVOICE</p>
           <div className='flex flex-col gap-3'>
 
             <button
@@ -44,6 +45,7 @@ const Billing = () => {
 
 
       </div>
+    </div>
     </div>
   )
 }

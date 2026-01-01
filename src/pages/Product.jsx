@@ -14,7 +14,7 @@ const Product = () => {
                 <h1 className="text-3xl font-bold text-gray-900 mb-6 mt-8">Inventory</h1>
 
                 <div className='border border-gray-600 py-6 px-8 w-fit gap-3 flex flex-col rounded-md'>
-                    <p className='font-semibold text-3xl'>Products</p>
+                    <p className='font-semibold text-3xl'>PRODUCTS</p>
                     <div className='flex flex-col gap-3'>
 
                         <button
