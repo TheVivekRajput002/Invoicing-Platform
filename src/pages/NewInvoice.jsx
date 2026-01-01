@@ -102,6 +102,18 @@ const InvoiceGenerator = () => {
         })));
     }, [gstIncluded]);
 
+    // Reset invoice saved state when user starts creating new invoice
+useEffect(() => {
+    if (invoiceSaved && (
+        customerDetails.phoneNumber ||
+        customerDetails.customerName ||
+        products.some(p => p.productName || p.quantity || p.rate)
+    )) {
+        setInvoiceSaved(false);
+        setSavedInvoiceData(null);
+    }
+}, [customerDetails, products]);
+
     const searchCustomerByPhone = async (phoneNumber) => {
         if (!phoneNumber || phoneNumber.length !== 10) {
             setCustomerFound(false);
@@ -312,6 +324,9 @@ const InvoiceGenerator = () => {
     };
 
     const calculateTotalGST = () => {
+        if (gstIncluded) {
+            return 0; // When GST is included in rate, don't show separate GST
+        }
         return products.reduce((sum, product) => {
             const base = product.quantity * product.rate;
             const gst = (base * product.gstPercentage) / 100;
@@ -515,6 +530,7 @@ const InvoiceGenerator = () => {
         }
 
         // Navigation with Enter, Left, Right arrows
+        // Navigation with Enter, Left, Right arrows
         if (e.key === 'Enter' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             e.preventDefault();
 
@@ -524,8 +540,24 @@ const InvoiceGenerator = () => {
             let nextIndex;
             if (e.key === 'Enter' || e.key === 'ArrowRight') {
                 nextIndex = currentIndex + 1;
+
+                // Skip GST percentage field if it's disabled
+                if (nextIndex < keys.length) {
+                    const nextKey = keys[nextIndex];
+                    if (nextKey.includes('gstPercentage') && gstIncluded) {
+                        nextIndex = currentIndex + 2; // Skip to the next field after GST
+                    }
+                }
             } else if (e.key === 'ArrowLeft') {
                 nextIndex = currentIndex - 1;
+
+                // Skip GST percentage field if it's disabled
+                if (nextIndex >= 0) {
+                    const prevKey = keys[nextIndex];
+                    if (prevKey.includes('gstPercentage') && gstIncluded) {
+                        nextIndex = currentIndex - 2; // Skip back one more field
+                    }
+                }
             }
 
             // Focus next/previous field if it exists
@@ -546,8 +578,6 @@ const InvoiceGenerator = () => {
                 }, 100);
             }
         }
-
-
 
 
         // Tab through product fields horizontally with Arrow Right/Left
@@ -782,7 +812,7 @@ const InvoiceGenerator = () => {
                         <h3 className="text-lg font-bold text-gray-800 mb-4">ITEMS</h3>
 
                         {/* Desktop Table View */}
-                        <div className="hidden md:block">
+                        <div>
                             <div className="border-2 border-gray-300 rounded-lg" style={{ overflow: 'visible' }}>
                                 <table className="w-full" style={{ overflow: 'visible' }}>
                                     <thead>
@@ -946,128 +976,6 @@ const InvoiceGenerator = () => {
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-
-                        {/* Mobile Cards View */}
-                        <div className="md:hidden space-y-4">
-                            {/* GST Toggle for Mobile */}
-                            <div className="flex items-center justify-between p-4 bg-gray-800 text-white rounded-lg">
-                                <span className="font-semibold">Rate includes GST:</span>
-                                <button
-                                    onClick={() => setGstIncluded(!gstIncluded)}
-                                    className={`px-4 py-2 rounded-lg font-semibold transition-colors ${gstIncluded
-                                        ? 'bg-green-500'
-                                        : 'bg-gray-600'
-                                        }`}
-                                >
-                                    {gstIncluded ? 'Yes (With GST)' : 'No (Without GST)'}
-                                </button>
-                            </div>
-
-                            {products.map((product, index) => (
-                                <div key={product.id} className="border-2 border-gray-300 rounded-lg p-4 bg-white">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h4 className="text-base font-bold text-gray-800">Item #{index + 1}</h4>
-                                        <button
-                                            onClick={() => removeProduct(product.id)}
-                                            className="text-red-600 hover:text-red-800 p-2"
-                                            disabled={products.length === 1}
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <div className="relative">
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Product Name</label>
-                                            <input
-                                                type="text"
-                                                value={product.productName}
-                                                onChange={(e) => handleProductChange(product.id, 'productName', e.target.value)}
-                                                onBlur={() => {
-                                                    setTimeout(() => {
-                                                        setShowProductDropdown(prev => ({ ...prev, [product.id]: false }));
-                                                        if (product.productName && product.hsnCode && product.rate) {
-                                                            autoSaveNewProduct(product);
-                                                        }
-                                                    }, 200);
-                                                }}
-                                                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="Start typing product name..."
-                                            />
-
-                                            {/* Mobile dropdown */}
-                                            {showProductDropdown[product.id] && productSearchResults[product.id]?.length > 0 && (
-                                                <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                                                    {productSearchResults[product.id].map((item) => (
-                                                        <div
-                                                            key={item.id}
-                                                            onClick={() => handleProductSelect(product.id, item)}
-                                                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b"
-                                                        >
-                                                            <p className="font-semibold text-sm">{item.product_name}</p>
-                                                            <p className="text-xs text-gray-600">₹{item.base_rate} • HSN: {item.hsn_code}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-gray-700 mb-1">HSN Code</label>
-                                                <input
-                                                    type="text"
-                                                    value={product.hsnCode}
-                                                    onChange={(e) => handleProductChange(product.id, 'hsnCode', e.target.value)}
-                                                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                    placeholder="HSN"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-gray-700 mb-1">Quantity</label>
-                                                <input
-                                                    type="number"
-                                                    value={product.quantity}
-                                                    onChange={(e) => handleProductChange(product.id, 'quantity', parseFloat(e.target.value) || 0)}
-                                                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                                    Rate (₹) {gstIncluded && <span className="text-xs text-green-600">(incl. GST)</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    value={product.rate}
-                                                    onChange={(e) => handleProductChange(product.id, 'rate', parseFloat(e.target.value) || 0)}
-                                                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold text-gray-700 mb-1">GST %</label>
-                                                <input
-                                                    type="number"
-                                                    value={product.gstPercentage}
-                                                    onChange={(e) => handleProductChange(product.id, 'gstPercentage', parseFloat(e.target.value) || 0)}
-                                                    disabled={gstIncluded}
-                                                    className={`w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 ${gstIncluded ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
-                                                        }`}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-2 border-t-2 border-gray-200">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-semibold text-gray-700">Amount:</span>
-                                                <span className="text-lg font-bold text-blue-600">₹{product.totalAmount.toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
                         </div>
 
                         <button
