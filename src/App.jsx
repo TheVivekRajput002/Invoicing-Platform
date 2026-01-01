@@ -15,6 +15,7 @@ import ProductAdd from './pages/ProductAdd';
 import Product from './pages/Product';
 import TestPage from './pages/TestPage';
 import ProductViewEdit from './pages/ProductViewEdit'
+import CustomerViewEdit from './pages/CustomerViewEdit'
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
             <Route path='/customer/edit/:id' element={<EditCustomer />} />
             <Route path='/test' element={<TestPage />} />
             <Route path="/product/:productId" element={<ProductViewEdit />} />
+            <Route path="/customer/:customerId" element={<CustomerViewEdit />} />
 
           </Routes>
         </main>
