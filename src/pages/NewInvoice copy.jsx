@@ -103,16 +103,16 @@ const InvoiceGenerator = () => {
     }, [gstIncluded]);
 
     // Reset invoice saved state when user starts creating new invoice
-    useEffect(() => {
-        if (invoiceSaved && (
-            customerDetails.phoneNumber ||
-            customerDetails.customerName ||
-            products.some(p => p.productName || p.quantity || p.rate)
-        )) {
-            setInvoiceSaved(false);
-            setSavedInvoiceData(null);
-        }
-    }, [customerDetails, products]);
+useEffect(() => {
+    if (invoiceSaved && (
+        customerDetails.phoneNumber ||
+        customerDetails.customerName ||
+        products.some(p => p.productName || p.quantity || p.rate)
+    )) {
+        setInvoiceSaved(false);
+        setSavedInvoiceData(null);
+    }
+}, [customerDetails, products]);
 
     const searchCustomerByPhone = async (phoneNumber) => {
         if (!phoneNumber || phoneNumber.length !== 10) {
@@ -379,50 +379,6 @@ const InvoiceGenerator = () => {
         }
     };
 
-    // Deduct stock for sold products
-    const deductStockForProducts = async (productsToDeduct) => {
-        try {
-            for (const product of productsToDeduct) {
-                // Only deduct if product exists in database (has valid product name, hsn, rate)
-                if (!product.productName || !product.hsnCode || !product.rate) {
-                    continue;
-                }
-
-                // Find the product in database by name and HSN code
-                const { data: existingProduct, error: fetchError } = await supabase
-                    .from('products')
-                    .select('id, current_stock')
-                    .eq('product_name', product.productName)
-                    .eq('hsn_code', product.hsnCode)
-                    .maybeSingle();
-
-                if (fetchError) {
-                    console.error('Error fetching product for stock deduction:', fetchError);
-                    continue;
-                }
-
-                if (existingProduct) {
-                    // Calculate new stock (prevent negative stock)
-                    const newStock = Math.max(0, existingProduct.current_stock - product.quantity);
-
-                    // Update stock in database
-                    const { error: updateError } = await supabase
-                        .from('products')
-                        .update({ current_stock: newStock })
-                        .eq('id', existingProduct.id);
-
-                    if (updateError) {
-                        console.error('Error updating stock for product:', product.productName, updateError);
-                    } else {
-                        console.log(`Stock updated for ${product.productName}: ${existingProduct.current_stock} → ${newStock}`);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Error in stock deduction process:', error);
-        }
-    };
-
     const saveInvoice = async () => {
         setSaving(true);
 
@@ -503,8 +459,6 @@ const InvoiceGenerator = () => {
             if (itemsError) {
                 throw itemsError;
             }
-
-            await deductStockForProducts(products);
 
             // Store saved data for PDF generation
             setSavedInvoiceData({
@@ -1058,12 +1012,7 @@ const InvoiceGenerator = () => {
                                 <select
                                     value={paymentMode}
                                     onChange={(e) => setPaymentMode(e.target.value)}
-                                    className={`w-full px-4 py-2 border-2 rounded-lg focus:ring-2 font-medium transition-colors ${paymentMode === 'unpaid'
-                                            ? 'border-red-300 bg-red-50 text-red-700 focus:ring-red-500'
-                                            : paymentMode === 'cash'
-                                                ? 'border-green-300 bg-green-50 text-green-700 focus:ring-green-500'
-                                                : 'border-blue-300 bg-blue-50 text-blue-700 focus:ring-blue-500'
-                                        }`}
+                                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-medium"
                                 >
                                     <option value="unpaid">Unpaid</option>
                                     <option value="cash">Cash</option>
