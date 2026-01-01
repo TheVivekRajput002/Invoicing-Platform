@@ -21,6 +21,9 @@ const InvoiceGenerator = () => {
     const [showProductDropdown, setShowProductDropdown] = useState({});
     const [searchingProduct, setSearchingProduct] = useState({});
     const [autoSavedProducts, setAutoSavedProducts] = useState(new Set());
+    // Add a new state to track which products are from database
+    const [productsFromDB, setProductsFromDB] = useState(new Set());
+
 
 
     // Refs for keyboard navigation
@@ -103,16 +106,16 @@ const InvoiceGenerator = () => {
     }, [gstIncluded]);
 
     // Reset invoice saved state when user starts creating new invoice
-useEffect(() => {
-    if (invoiceSaved && (
-        customerDetails.phoneNumber ||
-        customerDetails.customerName ||
-        products.some(p => p.productName || p.quantity || p.rate)
-    )) {
-        setInvoiceSaved(false);
-        setSavedInvoiceData(null);
-    }
-}, [customerDetails, products]);
+    useEffect(() => {
+        if (invoiceSaved && (
+            customerDetails.phoneNumber ||
+            customerDetails.customerName ||
+            products.some(p => p.productName || p.quantity || p.rate)
+        )) {
+            setInvoiceSaved(false);
+            setSavedInvoiceData(null);
+        }
+    }, [customerDetails, products]);
 
     const searchCustomerByPhone = async (phoneNumber) => {
         if (!phoneNumber || phoneNumber.length !== 10) {
@@ -214,7 +217,29 @@ useEffect(() => {
         };
     }, [products.map(p => p.productName).join(',')]);
 
-    // Handle product selection from dropdown
+    // Add this useEffect after your existing useEffects
+    // REPLACE the existing useEffect (around line 235) with this:
+    useEffect(() => {
+        const checkAndSaveNewProducts = async () => {
+            for (const product of products) {
+                const isComplete = product.productName && product.hsnCode && product.rate;
+                const isFromDB = productsFromDB.has(product.id);
+                const alreadySaved = autoSavedProducts.has(product.productName + product.hsnCode);
+
+                if (isComplete && !isFromDB && !alreadySaved) {
+                    await autoSaveNewProduct(product);
+                }
+            }
+        };
+
+        const timer = setTimeout(() => {
+            checkAndSaveNewProducts();
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [products]); // SIMPLIFIED - only watch products
+
+    // Modify handleProductSelect
     const handleProductSelect = (productId, selectedProduct) => {
         setProducts(prev => prev.map(product => {
             if (product.id === productId) {
@@ -226,7 +251,6 @@ useEffect(() => {
                     gstPercentage: selectedProduct.gst_rate || 18
                 };
 
-                // Recalculate total with new rate
                 updated.totalAmount = calculateProductTotal(
                     updated.quantity,
                     updated.rate,
@@ -239,9 +263,10 @@ useEffect(() => {
             return product;
         }));
 
+        // Mark this product as from database (so we don't auto-save it)
+        setProductsFromDB(prev => new Set([...prev, productId]));
         setShowProductDropdown(prev => ({ ...prev, [productId]: false }));
 
-        // Focus back on the product name input after selection
         setTimeout(() => {
             inputRefs.current[`${productId}-productName`]?.focus();
         }, 0);
@@ -338,44 +363,108 @@ useEffect(() => {
         return products.reduce((sum, product) => sum + product.totalAmount, 0);
     };
 
-    // Auto-save new product to database
     const autoSaveNewProduct = async (product) => {
-
         if (!product.productName || !product.hsnCode || !product.rate) {
-            return; // Don't save incomplete products
+            return;
+        }
+
+        // Create unique key for this product
+        const productKey = product.productName + product.hsnCode;
+
+        // Check if already saved
+        if (autoSavedProducts.has(productKey)) {
+            return;
         }
 
         try {
-            // Check if product already exists
-            const { data: existing } = await supabase
+            // Check if product already exists in database
+            const { data: existing, error: searchError } = await supabase
                 .from('products')
                 .select('id')
                 .eq('product_name', product.productName)
+                .eq('hsn_code', product.hsnCode)
                 .maybeSingle();
 
+            if (searchError) throw searchError;
+
             if (existing) {
-                return; // Product already exists
+                console.log('Product already exists in DB:', product.productName);
+                return;
             }
 
             // Insert new product
-            const { error } = await supabase
+            const { data: newProduct, error: insertError } = await supabase
                 .from('products')
                 .insert([{
                     product_name: product.productName,
                     hsn_code: product.hsnCode,
                     base_rate: product.rate,
-                    purchase_rate: product.rate * 0.8, // Estimate 20% margin
+                    purchase_rate: product.rate * 0.8,
                     gst_rate: product.gstPercentage,
                     current_stock: 0,
-                    minimum_stock: 5
-                }]);
+                    minimum_stock: 5,
+                    brand: '', // You can add brand field if needed
+                    vehicle_model: '' // You can add vehicle field if needed
+                }])
+                .select()
+                .single();
 
-            if (error) throw error;
+            if (insertError) throw insertError;
 
-            console.log('New product auto-saved:', product.productName);
-            setAutoSavedProducts(prev => new Set([...prev, product.productName]));
+            console.log('✅ New product auto-saved to inventory:', product.productName);
+
+            // Mark as saved
+            setAutoSavedProducts(prev => new Set([...prev, productKey]));
+
+            // Optional: Show success message
+            // alert(`New product "${product.productName}" added to inventory!`);
+
         } catch (error) {
             console.error('Error auto-saving product:', error);
+        }
+    };
+
+    // Deduct stock for sold products
+    const deductStockForProducts = async (productsToDeduct) => {
+        try {
+            for (const product of productsToDeduct) {
+                // Only deduct if product exists in database (has valid product name, hsn, rate)
+                if (!product.productName || !product.hsnCode || !product.rate) {
+                    continue;
+                }
+
+                // Find the product in database by name and HSN code
+                const { data: existingProduct, error: fetchError } = await supabase
+                    .from('products')
+                    .select('id, current_stock')
+                    .eq('product_name', product.productName)
+                    .eq('hsn_code', product.hsnCode)
+                    .maybeSingle();
+
+                if (fetchError) {
+                    console.error('Error fetching product for stock deduction:', fetchError);
+                    continue;
+                }
+
+                if (existingProduct) {
+                    // Calculate new stock (prevent negative stock)
+                    const newStock = Math.max(0, existingProduct.current_stock - product.quantity);
+
+                    // Update stock in database
+                    const { error: updateError } = await supabase
+                        .from('products')
+                        .update({ current_stock: newStock })
+                        .eq('id', existingProduct.id);
+
+                    if (updateError) {
+                        console.error('Error updating stock for product:', product.productName, updateError);
+                    } else {
+                        console.log(`Stock updated for ${product.productName}: ${existingProduct.current_stock} → ${newStock}`);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error in stock deduction process:', error);
         }
     };
 
@@ -459,6 +548,8 @@ useEffect(() => {
             if (itemsError) {
                 throw itemsError;
             }
+
+            await deductStockForProducts(products);
 
             // Store saved data for PDF generation
             setSavedInvoiceData({
@@ -855,9 +946,6 @@ useEffect(() => {
                                                             onBlur={() => {
                                                                 setTimeout(() => {
                                                                     setShowProductDropdown(prev => ({ ...prev, [product.id]: false }));
-                                                                    if (product.productName && product.hsnCode && product.rate) {
-                                                                        autoSaveNewProduct(product);
-                                                                    }
                                                                 }, 200);
                                                             }}
                                                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
@@ -1012,7 +1100,12 @@ useEffect(() => {
                                 <select
                                     value={paymentMode}
                                     onChange={(e) => setPaymentMode(e.target.value)}
-                                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-medium"
+                                    className={`w-full px-4 py-2 border-2 rounded-lg focus:ring-2 font-medium transition-colors ${paymentMode === 'unpaid'
+                                        ? 'border-red-300 bg-red-50 text-red-700 focus:ring-red-500'
+                                        : paymentMode === 'cash'
+                                            ? 'border-green-300 bg-green-50 text-green-700 focus:ring-green-500'
+                                            : 'border-blue-300 bg-blue-50 text-blue-700 focus:ring-blue-500'
+                                        }`}
                                 >
                                     <option value="unpaid">Unpaid</option>
                                     <option value="cash">Cash</option>
