@@ -695,7 +695,7 @@ useEffect(() => {
                     {/* Customer Details Section */}
                     <div className="p-6 border-b-2 border-gray-300 bg-blue-50">
                         <h3 className="text-lg font-bold text-gray-800 mb-4">BILL</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                     Phone Number *
@@ -808,7 +808,7 @@ useEffect(() => {
                     </div>
 
                     {/* Products Table Section */}
-                    <div className="p-6">
+                    <div className="p-6 max-md:py-3 max-md:px-6">
                         <h3 className="text-lg font-bold text-gray-800 mb-4">ITEMS</h3>
 
                         <div>
@@ -1007,7 +1007,7 @@ useEffect(() => {
 
                             </div>
                             {/* Payment Mode */}
-                            <div className='mt-6 w-[60%]'>
+                            <div className=' w-[60%]'>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Mode</label>
                                 <select
                                     value={paymentMode}
