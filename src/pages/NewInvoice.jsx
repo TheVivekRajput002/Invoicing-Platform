@@ -817,10 +817,10 @@ useEffect(() => {
                                     <thead>
                                         <tr className="bg-gray-800 text-white">
                                             <th className="px-3 py-3 text-left text-sm font-semibold w-10">S.No</th>
-                                            <th className="px-4 py-3 text-left text-sm font-semibold min-w-[200px]">Product Name</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold min-w-[200px] max-md:min-w-[150px]">Product Name</th>
                                             <th className="px-4 py-3 text-left text-sm font-semibold w-32">HSN</th>
                                             <th className="px-4 py-3 text-center text-sm font-semibold w-24">Qty</th>
-                                            <th className="px-4 py-3 text-right text-sm font-semibold w-32">
+                                            <th className="px-4 py-3 text-right text-sm font-semibold w-32 max-md:w-30">
                                                 <div className="flex flex-col items-end gap-1">
                                                     <span>Rate</span>
                                                     <button
@@ -843,8 +843,8 @@ useEffect(() => {
                                     <tbody>
                                         {products.map((product, index) => (
                                             <tr key={product.id} className="border-b border-gray-300 hover:bg-gray-50">
-                                                <td className="px-2 py-3 text-sm text-center">{index + 1}</td>
-                                                <td className="px-2 py-3" style={{ position: 'relative' }}>
+                                                <td className="px-2 py-3 text-sm text-center max-md:px-1">{index + 1}</td>
+                                                <td className="px-2 py-3 max-md:px-1" style={{ position: 'relative' }}>
                                                     <div style={{ position: 'relative' }}>
                                                         <input
                                                             ref={(el) => setInputRef(`${product.id}-productName`, el)}
@@ -915,7 +915,7 @@ useEffect(() => {
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-2 py-3">
+                                                <td className="px-2 py-3 max-md:px-1">
                                                     <input
                                                         ref={(el) => setInputRef(`${product.id}-hsnCode`, el)}
                                                         type="text"
@@ -926,7 +926,7 @@ useEffect(() => {
                                                         placeholder="HSN"
                                                     />
                                                 </td>
-                                                <td className="px-2 py-3">
+                                                <td className="px-2 py-3 max-md:px-1">
                                                     <input
                                                         ref={(el) => setInputRef(`${product.id}-quantity`, el)}
                                                         type="number"
@@ -936,7 +936,7 @@ useEffect(() => {
                                                         className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center"
                                                     />
                                                 </td>
-                                                <td className="px-2 py-3">
+                                                <td className="px-2 py-3 max-md:px-1">
                                                     <input
                                                         ref={(el) => setInputRef(`${product.id}-rate`, el)}
                                                         type="number"
@@ -946,7 +946,7 @@ useEffect(() => {
                                                         className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-right"
                                                     />
                                                 </td>
-                                                <td className="px-2 py-3">
+                                                <td className="px-2 py-3 max-md:px-1">
                                                     <input
                                                         ref={(el) => setInputRef(`${product.id}-gstPercentage`, el)}
                                                         type="number"
@@ -958,10 +958,10 @@ useEffect(() => {
                                                             }`}
                                                     />
                                                 </td>
-                                                <td className="px-2 py-3 text-sm font-semibold text-right">
+                                                <td className="px-2 py-3 text-sm font-semibold text-right max-md:px-1">
                                                     ₹{product.totalAmount.toFixed(2)}
                                                 </td>
-                                                <td className="px-2 py-3 text-center">
+                                                <td className="px-2 py-3 text-center max-md:px-1">
                                                     <button
                                                         onClick={() => removeProduct(product.id)}
                                                         className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors"
