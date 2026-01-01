@@ -14,7 +14,6 @@ const CustomerDetailsForm = ({
 }) => {
     return (
         <div className="p-6 border-b-2 border-gray-300 bg-blue-50">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">BILL</h3>
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">

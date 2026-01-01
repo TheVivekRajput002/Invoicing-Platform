@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Trash2 } from 'lucide-react';
 
 const ProductRow = ({
@@ -16,10 +16,66 @@ const ProductRow = ({
     onDropdownToggle,
     canRemove
 }) => {
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
+    const dropdownItemRefs = useRef([]);
+
+    // Reset highlighted index when dropdown closes or results change
+    useEffect(() => {
+        if (!showDropdown || !searchResults?.length) {
+            setHighlightedIndex(-1);
+        }
+    }, [showDropdown, searchResults]);
+
+    // Scroll highlighted item into view
+    useEffect(() => {
+        if (highlightedIndex >= 0 && dropdownItemRefs.current[highlightedIndex]) {
+            dropdownItemRefs.current[highlightedIndex].scrollIntoView({
+                block: 'nearest',
+                behavior: 'smooth'
+            });
+        }
+    }, [highlightedIndex]);
+
+    const handleProductNameKeyDown = (e) => {
+        // If dropdown is showing and has results
+        if (showDropdown && searchResults?.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setHighlightedIndex(prev =>
+                    prev < searchResults.length - 1 ? prev + 1 : 0
+                );
+                return;
+            }
+
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setHighlightedIndex(prev =>
+                    prev > 0 ? prev - 1 : searchResults.length - 1
+                );
+                return;
+            }
+
+            if (e.key === 'Enter' && highlightedIndex >= 0) {
+                e.preventDefault();
+                onProductSelect(product.id, searchResults[highlightedIndex]);
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                onDropdownToggle(product.id, false);
+                return;
+            }
+        }
+
+        // Default keyboard navigation for other cases
+        onKeyDown(e, `${product.id}-productName`, product.id);
+    };
+
     return (
         <tr className="border-b border-gray-300 hover:bg-gray-50">
             <td className="px-2 py-3 text-sm text-center max-md:px-1">{index + 1}</td>
-            
+
             {/* Product Name */}
             <td className="px-2 py-3 max-md:px-1" style={{ position: 'relative' }}>
                 <div style={{ position: 'relative' }}>
@@ -27,10 +83,18 @@ const ProductRow = ({
                         ref={(el) => inputRefs.current[`${product.id}-productName`] = el}
                         type="text"
                         value={product.productName}
-                        onChange={(e) => onProductChange(product.id, 'productName', e.target.value)}
-                        onKeyDown={(e) => onKeyDown(e, `${product.id}-productName`, product.id)}
+                        onChange={(e) => {
+                            onProductChange(product.id, 'productName', e.target.value);
+                            setHighlightedIndex(-1); // Reset highlight when typing
+                        }}
+                        onKeyDown={handleProductNameKeyDown}
                         onBlur={() => {
                             setTimeout(() => onDropdownToggle(product.id, false), 200);
+                        }}
+                        onFocus={() => {
+                            if (product.productName.length >= 2) {
+                                onDropdownToggle(product.id, true);
+                            }
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
                         placeholder="Start typing product name..."
@@ -47,18 +111,24 @@ const ProductRow = ({
                                 zIndex: 9999
                             }}
                         >
-                            {searchResults.map((item) => (
+                            {searchResults.map((item, idx) => (
                                 <div
                                     key={item.id}
+                                    ref={(el) => dropdownItemRefs.current[idx] = el}
                                     onMouseDown={(e) => {
                                         e.preventDefault();
                                         onProductSelect(product.id, item);
                                     }}
-                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
+                                    onMouseEnter={() => setHighlightedIndex(idx)}
+                                    className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-0 transition-colors ${highlightedIndex === idx
+                                        ? 'bg-blue-100 border-l-4 border-l-blue-600'
+                                        : 'hover:bg-blue-50'
+                                        }`}
                                 >
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
-                                            <p className="font-semibold text-sm text-gray-900">
+                                            <p className={`font-semibold text-sm ${highlightedIndex === idx ? 'text-blue-900' : 'text-gray-900'
+                                                }`}>
                                                 {item.product_name}
                                             </p>
                                             <div className="flex gap-3 mt-1">
@@ -70,7 +140,8 @@ const ProductRow = ({
                                                 </span>
                                             </div>
                                         </div>
-                                        <span className="text-sm font-bold text-blue-600">
+                                        <span className={`text-sm font-bold ${highlightedIndex === idx ? 'text-blue-700' : 'text-blue-600'
+                                            }`}>
                                             ₹{item.base_rate}
                                         </span>
                                     </div>
@@ -126,7 +197,7 @@ const ProductRow = ({
             </td>
 
             {/* GST Percentage */}
-            <td className="px-2 py-3 max-md:px-1">
+            {/* <td className="px-2 py-3 max-md:px-1">
                 <input
                     ref={(el) => inputRefs.current[`${product.id}-gstPercentage`] = el}
                     type="number"
@@ -134,10 +205,26 @@ const ProductRow = ({
                     onChange={(e) => onProductChange(product.id, 'gstPercentage', parseFloat(e.target.value) || 0)}
                     onKeyDown={(e) => onKeyDown(e, `${product.id}-gstPercentage`, product.id)}
                     disabled={gstIncluded}
-                    className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center ${
-                        gstIncluded ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
-                    }`}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center ${gstIncluded ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                        }`}
                 />
+            </td> */}
+            <td className="px-2 py-3 max-md:px-1">
+                <select
+                    ref={(el) => inputRefs.current[`${product.id}-gstPercentage`] = el}
+                    value={product.gstPercentage}
+                    onChange={(e) => onProductChange(product.id, 'gstPercentage', parseFloat(e.target.value))}
+                    onKeyDown={(e) => onKeyDown(e, `${product.id}-gstPercentage`, product.id)}
+                    disabled={gstIncluded}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center ${gstIncluded ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                        }`}
+                >
+                    <option value={0}>0%</option>
+                    <option value={5}>5%</option>
+                    <option value={12}>12%</option>
+                    <option value={18}>18%</option>
+                    <option value={28}>28%</option>
+                </select>
             </td>
 
             {/* Total Amount */}

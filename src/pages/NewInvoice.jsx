@@ -48,7 +48,7 @@ const InvoiceGenerator = () => {
         hsnCode: '',
         quantity: 0,
         rate: 0,
-        gstPercentage: 18,
+        gstPercentage: 0,
         totalAmount: 0
     }]);
     const [productsFromDB, setProductsFromDB] = useState(new Set());
@@ -90,10 +90,16 @@ const InvoiceGenerator = () => {
     }, [customerData]);
 
     // Recalculate totals when GST toggle changes
+    // Recalculate totals when GST toggle changes
     useEffect(() => {
         setProducts(prev => prev.map(product => ({
             ...product,
-            totalAmount: calculateProductTotal(product.quantity, product.rate, product.gstPercentage)
+            gstPercentage: gstIncluded ? 0 : product.gstPercentage, // Set GST to 0 when "With GST" is enabled
+            totalAmount: calculateProductTotal(
+                product.quantity,
+                product.rate,
+                gstIncluded ? 0 : product.gstPercentage
+            )
         })));
     }, [gstIncluded]);
 
@@ -187,7 +193,7 @@ const InvoiceGenerator = () => {
                     productName: selectedProduct.product_name,
                     hsnCode: selectedProduct.hsn_code,
                     rate: selectedProduct.base_rate,
-                    gstPercentage: selectedProduct.gst_rate || 18
+                    gstPercentage: selectedProduct.gst_rate || 0
                 };
 
                 updated.totalAmount = calculateProductTotal(
@@ -213,7 +219,7 @@ const InvoiceGenerator = () => {
             hsnCode: '',
             quantity: 0,
             rate: 0,
-            gstPercentage: 18,
+            gstPercentage: 0,
             totalAmount: 0
         };
         setProducts([...products, newProduct]);
@@ -350,7 +356,7 @@ const InvoiceGenerator = () => {
 
             // Reset form
             setCustomerDetails({ customerName: '', customerAddress: '', vehicle: '', phoneNumber: '' });
-            setProducts([{ id: 1, serialNumber: 1, productName: '', hsnCode: '', quantity: 0, rate: 0, gstPercentage: 18, totalAmount: 0 }]);
+            setProducts([{ id: 1, serialNumber: 1, productName: '', hsnCode: '', quantity: 0, rate: 0, gstPercentage:0, totalAmount: 0 }]);
             setPaymentMode('unpaid');
             setGstin('');
         } catch (error) {
