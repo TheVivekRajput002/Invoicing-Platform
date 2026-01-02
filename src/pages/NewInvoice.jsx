@@ -450,7 +450,7 @@ const InvoiceGenerator = () => {
                 </button>
 
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <InvoiceHeader invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} />
+                    <InvoiceHeader pageHead="INVOICE" invoiceNumber="Invoice No." invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} />
 
                     <CustomerDetailsForm
                         customerDetails={customerDetails}

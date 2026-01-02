@@ -1,10 +1,10 @@
 import React from 'react';
 import { Building2 } from 'lucide-react';
 
-const InvoiceHeader = ({ invoiceDate, onInvoiceDateChange }) => {
+const InvoiceHeader = ({ pageHead,invoiceNumber,invoiceDate, onInvoiceDateChange }) => {
     return (
         <div className="border-y-4 border-gray-800">
-            <h2 className="text-xl font-bold text-gray-800 my-6 text-center">TAX INVOICE</h2>
+            <h2 className="text-xl font-bold text-gray-800 my-6 text-center">{pageHead}</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
                 {/* Left - Company Details */}
@@ -26,7 +26,7 @@ const InvoiceHeader = ({ invoiceDate, onInvoiceDateChange }) => {
                 <div className="p-6 bg-gray-50 border-t-2 border-gray-300">
                     <div className="space-y-2 mt-6">
                         <div className="flex justify-between">
-                            <span className="text-sm font-semibold text-gray-700">Invoice Date:</span>
+                            <span className="text-sm font-semibold text-gray-700">Date:</span>
                             <input
                                 type="date"
                                 value={invoiceDate}
@@ -35,7 +35,7 @@ const InvoiceHeader = ({ invoiceDate, onInvoiceDateChange }) => {
                             />
                         </div>
                         <div className="flex justify-between mt-3">
-                            <span className="text-sm font-semibold text-gray-700">Invoice No:</span>
+                            <span className="text-sm font-semibold text-gray-700">{invoiceNumber}</span>
                             <span className="text-sm text-gray-900 font-mono">INV-{Date.now()}</span>
                         </div>
                     </div>

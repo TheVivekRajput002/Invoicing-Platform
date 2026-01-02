@@ -321,7 +321,7 @@ const EstimateAdd = () => {
                 .single();
 
             const itemsToInsert = products.map(product => ({
-                invoice_id: invoiceData.id,
+                estimate_id: invoiceData.id,
                 serial_number: product.serialNumber,
                 product_name: product.productName,
                 hsn_code: product.hsnCode,
@@ -331,7 +331,7 @@ const EstimateAdd = () => {
                 total_product: product.totalAmount
             }));
 
-            await supabase.from('invoice_items').insert(itemsToInsert);
+            await supabase.from('estimate_items').insert(itemsToInsert);
             await deductStockForProducts(products);
 
             // 🆕 Generate PDF component
@@ -349,13 +349,13 @@ const EstimateAdd = () => {
             );
 
             // 🆕 Upload PDF and get URL
-            const pdfUrl = await uploadInvoicePDF(pdfComponent, invoiceData.invoice_number);
+            const pdfUrl = await uploadInvoicePDF(pdfComponent, invoiceData.estimate_number);
 
             // 🆕 Send to WhatsApp
             sendInvoiceToWhatsApp(
                 customerDetails.phoneNumber,
                 pdfUrl,
-                invoiceData.invoice_number,
+                invoiceData.estimate_number,
                 grandTotal.toFixed(2)
             );
 
@@ -425,17 +425,16 @@ const EstimateAdd = () => {
 
     const canSave = customerDetails.customerName && customerDetails.phoneNumber && !phoneError && customerDetails.phoneNumber.length === 10;
 
-    const getNextInvoiceNumber = async () => {
+    const getNextEstimateNumber = async () => {
         try {
-            const { data, error } = await supabase.rpc('get_next_invoice_number');
+            const { data, error } = await supabase.rpc('get_next_estimate_number');
 
             if (error) throw error;
 
-            return data; // Returns "001", "002", etc.
+            return data; // Returns "EST001", "EST002", etc.
         } catch (error) {
-            console.error('Error generating invoice number:', error);
-            // Fallback to timestamp-based if function fails
-            return `INV-${Date.now()}`;
+            console.error('Error generating estimate number:', error);
+            return `EST-${Date.now()}`;
         }
     };
 
@@ -450,7 +449,7 @@ const EstimateAdd = () => {
                 </button>
 
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <InvoiceHeader invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} />
+                    <InvoiceHeader pageHead="ESTIMATE" invoiceNumber="Estimate No" invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} />
 
                     <CustomerDetailsForm
                         customerDetails={customerDetails}
