@@ -18,7 +18,7 @@ import { uploadInvoicePDF } from '../utils/uploadInvoicePDF';
 import { sendInvoiceToWhatsApp } from '../utils/sendWhatsApp';
 import InvoicePDF from '../components/InvoicePDF'; // Your existing PDF component
 
-const InvoiceGenerator = () => {
+const EstimateAdd = () => {
     const navigate = useNavigate();
     const inputRefs = useRef({});
 
@@ -307,9 +307,9 @@ const InvoiceGenerator = () => {
             }
 
             const { data: invoiceData } = await supabase
-                .from('invoices')
+                .from('estimate')
                 .insert([{
-                    invoice_number: await getNextInvoiceNumber(),
+                    estimate_number: await getNextEstimateNumber(),
                     customer_id: customerId,
                     bill_date: invoiceDate,
                     generated_by: 'system',
@@ -502,4 +502,4 @@ const InvoiceGenerator = () => {
     );
 };
 
-export default InvoiceGenerator;
+export default EstimateAdd;

@@ -5,12 +5,15 @@ export const useCustomerSearch = (phoneNumber) => {
     const [searching, setSearching] = useState(false);
     const [found, setFound] = useState(false);
     const [customerData, setCustomerData] = useState(null);
+    const [searchResults, setSearchResults] = useState([]); // 🆕 Live search results
 
     useEffect(() => {
-        const searchCustomer = async () => {
-            if (!phoneNumber || phoneNumber.length !== 10) {
+        const searchCustomers = async () => {
+            // Clear results if input is empty
+            if (!phoneNumber || phoneNumber.length === 0) {
                 setFound(false);
                 setCustomerData(null);
+                setSearchResults([]);
                 return;
             }
 
@@ -19,22 +22,26 @@ export const useCustomerSearch = (phoneNumber) => {
                 const { data, error } = await supabase
                     .from('customers')
                     .select('*')
-                    .eq('phone_number', phoneNumber)
+                    .ilike('phone_number', `${phoneNumber}%`) // 🆕 Search by prefix
                     .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                    .limit(10); // 🆕 Show top 10 results
 
                 if (error) throw error;
 
-                if (data) {
-                    setCustomerData(data);
+                setSearchResults(data || []);
+                
+                // Auto-select if exact match
+                const exactMatch = data?.find(c => c.phone_number === phoneNumber);
+                if (exactMatch) {
+                    setCustomerData(exactMatch);
                     setFound(true);
                 } else {
                     setFound(false);
                     setCustomerData(null);
                 }
             } catch (error) {
-                console.error('Error searching customer:', error);
+                console.error('Error searching customers:', error);
+                setSearchResults([]);
                 setFound(false);
                 setCustomerData(null);
             } finally {
@@ -42,9 +49,9 @@ export const useCustomerSearch = (phoneNumber) => {
             }
         };
 
-        const timer = setTimeout(searchCustomer, 500);
+        const timer = setTimeout(searchCustomers, 300); // 🆕 Debounce for better performance
         return () => clearTimeout(timer);
     }, [phoneNumber]);
 
-    return { searching, found, customerData };
+    return { searching, found, customerData, searchResults }; // 🆕 Return searchResults
 };

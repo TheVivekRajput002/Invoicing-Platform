@@ -18,6 +18,8 @@ import ProductViewEdit from './pages/ProductViewEdit'
 import CustomerViewEdit from './pages/CustomerViewEdit'
 import Customer from './pages/Customer'
 import CustomerAdd from './pages/CustomerAdd'
+import EstimateAdd from './pages/EstimateAdd'
+import EstimateSearch from './pages/EstimateSearch'
 
 function App() {
   return (
@@ -48,6 +50,8 @@ function App() {
             <Route path='/test' element={<TestPage />} />
             <Route path="/product/:productId" element={<ProductViewEdit />} />
             <Route path="/customer/:customerId" element={<CustomerViewEdit />} />
+            <Route path="/billing/estimate/add" element={<EstimateAdd />} />
+            <Route path="/billing/estimate/search" element={<EstimateSearch />} />
 
           </Routes>
         </main>

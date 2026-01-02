@@ -10,7 +10,12 @@ const CustomerDetailsForm = ({
     gstin,
     onGstinChange,
     inputRefs,
-    onKeyDown
+    onKeyDown,
+    // 🆕 Add these props
+    customerSearchResults,
+    showCustomerDropdown,
+    onCustomerSelect,
+    onDropdownToggle
 }) => {
     return (
         <div className="p-6 border-b-2 border-gray-300 bg-blue-50">
@@ -29,12 +34,31 @@ const CustomerDetailsForm = ({
                                 onCustomerChange('phoneNumber', value);
                             }}
                             onKeyDown={(e) => onKeyDown(e, 'phoneNumber')}
-                            className={`w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                phoneError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
-                            }`}
+                            className={`w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${phoneError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                                }`}
                             placeholder="10-digit phone number"
                             maxLength="10"
                         />
+
+                        {/* 🆕 Dropdown */}
+                        {showCustomerDropdown && customerSearchResults && customerSearchResults.length > 0 && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                {customerSearchResults.map((customer) => (
+                                    <div
+                                        key={customer.id}
+                                        onClick={() => onCustomerSelect(customer)}
+                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
+                                    >
+                                        <div className="font-medium text-gray-900">{customer.name}</div>
+                                        <div className="text-sm text-gray-600">{customer.phone_number}</div>
+                                        {customer.vehicle && (
+                                            <div className="text-xs text-gray-500">{customer.vehicle}</div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
                         {searching && (
                             <div className="absolute right-3 top-3">
                                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>

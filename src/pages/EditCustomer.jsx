@@ -48,7 +48,7 @@ const EditCustomer = () => {
             alert('Error updating customer: ' + error.message);
         } else {
             alert('Customer updated successfully!');
-            navigate('/search');
+            navigate(-1);
         }
         setSaving(false);
     };
