@@ -289,7 +289,7 @@ const InvoiceGenerator = () => {
             const { data: invoiceData } = await supabase
                 .from('invoices')
                 .insert([{
-                    invoice_number: `INV-${Date.now()}`,
+                    invoice_number: await getNextInvoiceNumber(),
                     customer_id: customerId,
                     bill_date: invoiceDate,
                     generated_by: 'system',
@@ -356,7 +356,7 @@ const InvoiceGenerator = () => {
 
             // Reset form
             setCustomerDetails({ customerName: '', customerAddress: '', vehicle: '', phoneNumber: '' });
-            setProducts([{ id: 1, serialNumber: 1, productName: '', hsnCode: '', quantity: 0, rate: 0, gstPercentage:0, totalAmount: 0 }]);
+            setProducts([{ id: 1, serialNumber: 1, productName: '', hsnCode: '', quantity: 0, rate: 0, gstPercentage: 0, totalAmount: 0 }]);
             setPaymentMode('unpaid');
             setGstin('');
         } catch (error) {
@@ -404,6 +404,20 @@ const InvoiceGenerator = () => {
     };
 
     const canSave = customerDetails.customerName && customerDetails.phoneNumber && !phoneError && customerDetails.phoneNumber.length === 10;
+
+    const getNextInvoiceNumber = async () => {
+        try {
+            const { data, error } = await supabase.rpc('get_next_invoice_number');
+
+            if (error) throw error;
+
+            return data; // Returns "001", "002", etc.
+        } catch (error) {
+            console.error('Error generating invoice number:', error);
+            // Fallback to timestamp-based if function fails
+            return `INV-${Date.now()}`;
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-8">
