@@ -1,7 +1,7 @@
 import React from 'react';
 import { Building2 } from 'lucide-react';
 
-const InvoiceHeader = ({ pageHead,invoiceNumber,invoiceDate, onInvoiceDateChange }) => {
+const InvoiceHeader = ({ pageHead,displayNumber,invoiceNumber,invoiceDate, onInvoiceDateChange }) => {
     return (
         <div className="border-y-4 border-gray-800">
             <h2 className="text-xl font-bold text-gray-800 my-6 text-center">{pageHead}</h2>
@@ -36,7 +36,7 @@ const InvoiceHeader = ({ pageHead,invoiceNumber,invoiceDate, onInvoiceDateChange
                         </div>
                         <div className="flex justify-between mt-3">
                             <span className="text-sm font-semibold text-gray-700">{invoiceNumber}</span>
-                            <span className="text-sm text-gray-900 font-mono">INV-{Date.now()}</span>
+                            <span className="text-sm text-gray-900 font-mono">{displayNumber || 'Loading...'}</span>
                         </div>
                     </div>
                 </div>

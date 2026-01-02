@@ -30,6 +30,7 @@ const InvoiceGenerator = () => {
     const [saving, setSaving] = useState(false);
     const [invoiceSaved, setInvoiceSaved] = useState(false);
     const [savedInvoiceData, setSavedInvoiceData] = useState(null);
+    const [invoiceNumber, setInvoiceNumber] = useState('Loading...');
 
     // Customer states
     const [customerDetails, setCustomerDetails] = useState({
@@ -73,6 +74,33 @@ const InvoiceGenerator = () => {
         }
         return istTime.toISOString().split('T')[0];
     };
+
+    useEffect(() => {
+    const fetchNextInvoiceNumber = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('invoices')
+                .select('invoice_number')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                const lastNumber = parseInt(data[0].invoice_number.replace('INV', ''));
+                const nextNumber = lastNumber + 1;
+                setInvoiceNumber(`INV${String(nextNumber).padStart(3, '0')}`);
+            } else {
+                setInvoiceNumber('INV001');
+            }
+        } catch (error) {
+            console.error('Error fetching invoice number:', error);
+            setInvoiceNumber('INV001');
+        }
+    };
+
+    fetchNextInvoiceNumber();
+}, []);
 
     // Initialize date
     useEffect(() => {
@@ -309,7 +337,7 @@ const InvoiceGenerator = () => {
             const { data: invoiceData } = await supabase
                 .from('invoices')
                 .insert([{
-                    invoice_number: await getNextInvoiceNumber(),
+                    invoice_number:invoiceNumber,
                     customer_id: customerId,
                     bill_date: invoiceDate,
                     generated_by: 'system',
@@ -425,19 +453,7 @@ const InvoiceGenerator = () => {
 
     const canSave = customerDetails.customerName && customerDetails.phoneNumber && !phoneError && customerDetails.phoneNumber.length === 10;
 
-    const getNextInvoiceNumber = async () => {
-        try {
-            const { data, error } = await supabase.rpc('get_next_invoice_number');
 
-            if (error) throw error;
-
-            return data; // Returns "001", "002", etc.
-        } catch (error) {
-            console.error('Error generating invoice number:', error);
-            // Fallback to timestamp-based if function fails
-            return `INV-${Date.now()}`;
-        }
-    };
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-8">
@@ -450,7 +466,7 @@ const InvoiceGenerator = () => {
                 </button>
 
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <InvoiceHeader pageHead="INVOICE" invoiceNumber="Invoice No." invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} />
+                    <InvoiceHeader pageHead="INVOICE" invoiceNumber="Invoice No." displayNumber={invoiceNumber} invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} />
 
                     <CustomerDetailsForm
                         customerDetails={customerDetails}

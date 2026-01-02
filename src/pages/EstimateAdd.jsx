@@ -30,6 +30,7 @@ const EstimateAdd = () => {
     const [saving, setSaving] = useState(false);
     const [invoiceSaved, setInvoiceSaved] = useState(false);
     const [savedInvoiceData, setSavedInvoiceData] = useState(null);
+    const [estimateNumber, setEstimateNumber] = useState('Loading...');
 
     // Customer states
     const [customerDetails, setCustomerDetails] = useState({
@@ -73,6 +74,37 @@ const EstimateAdd = () => {
         }
         return istTime.toISOString().split('T')[0];
     };
+
+    // Fetch next estimate number on component load
+useEffect(() => {
+    const fetchNextEstimateNumber = async () => {
+        try {
+            // Get the last estimate number from the database
+            const { data, error } = await supabase
+                .from('estimate')
+                .select('estimate_number')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                // Extract number from last estimate (e.g., "EST001" -> 1)
+                const lastNumber = parseInt(data[0].estimate_number.replace('EST', ''));
+                const nextNumber = lastNumber + 1;
+                setEstimateNumber(`EST${String(nextNumber).padStart(3, '0')}`);
+            } else {
+                // First estimate
+                setEstimateNumber('EST001');
+            }
+        } catch (error) {
+            console.error('Error fetching estimate number:', error);
+            setEstimateNumber('EST001');
+        }
+    };
+
+    fetchNextEstimateNumber();
+}, []);
 
     // Initialize date
     useEffect(() => {
@@ -309,7 +341,7 @@ const EstimateAdd = () => {
             const { data: invoiceData } = await supabase
                 .from('estimate')
                 .insert([{
-                    estimate_number: await getNextEstimateNumber(),
+                    
                     customer_id: customerId,
                     bill_date: invoiceDate,
                     generated_by: 'system',
@@ -425,18 +457,6 @@ const EstimateAdd = () => {
 
     const canSave = customerDetails.customerName && customerDetails.phoneNumber && !phoneError && customerDetails.phoneNumber.length === 10;
 
-    const getNextEstimateNumber = async () => {
-        try {
-            const { data, error } = await supabase.rpc('get_next_estimate_number');
-
-            if (error) throw error;
-
-            return data; // Returns "EST001", "EST002", etc.
-        } catch (error) {
-            console.error('Error generating estimate number:', error);
-            return `EST-${Date.now()}`;
-        }
-    };
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-8">
@@ -449,7 +469,7 @@ const EstimateAdd = () => {
                 </button>
 
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <InvoiceHeader pageHead="ESTIMATE" invoiceNumber="Estimate No" invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} />
+                    <InvoiceHeader pageHead="ESTIMATE" invoiceNumber="Estimate No" invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} displayNumber={estimateNumber} />
 
                     <CustomerDetailsForm
                         customerDetails={customerDetails}
