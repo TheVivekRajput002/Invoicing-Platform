@@ -4,15 +4,12 @@ import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/render
 // Create styles
 const styles = StyleSheet.create({
     page: {
-        padding: 30,
+        padding: 15,
         fontSize: 10,
         fontFamily: 'Helvetica',
     },
     // Header Section
     headerContainer: {
-        borderTop: 4,
-        borderBottom: 4,
-        borderColor: '#1f2937',
         marginBottom: 0,
     },
     headerGrid: {
@@ -86,7 +83,8 @@ const styles = StyleSheet.create({
     },
     // Customer Section
     customerSection: {
-        padding: 15,
+        padding: 10,
+        paddingBottom: 10,
         backgroundColor: '#eff6ff',
         borderBottom: 2,
         borderColor: '#d1d5db',
@@ -99,8 +97,11 @@ const styles = StyleSheet.create({
     },
     customerGrid: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
+        justifyContent: 'space-between',
+        gap: 20,
+    },
+    customerColumn: {
+        width: '48%',
     },
     customerField: {
         width: '48%',
@@ -111,6 +112,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
         marginBottom: 3,
+        width: '50%'
     },
     fieldValue: {
         fontSize: 9,
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
     },
     // Items Section
     itemsSection: {
-        padding: 15,
+        padding: 10,
     },
     table: {
         borderWidth: 2,
@@ -154,10 +156,8 @@ const styles = StyleSheet.create({
     col7: { width: '20%', textAlign: 'right' },
     // Total Section
     totalSection: {
-        padding: 15,
+        padding: 8,
         backgroundColor: '#f9fafb',
-        borderTop: 2,
-        borderColor: '#d1d5db',
     },
     totalGrid: {
         flexDirection: 'row',
@@ -205,16 +205,17 @@ const styles = StyleSheet.create({
         fontFamily: 'Helvetica-Bold',
     },
     paymentBadge: {
-        padding: 3,
+        padding: 4,
         backgroundColor: '#ffffff',
-        borderRadius: 4,
+        borderRadius: 3,
         borderWidth: 2,
         borderColor: '#e5e7eb',
+        width: '50%'
     },
     paymentBadgeInner: {
-        padding: 4,
-        borderRadius: 12,
-        fontSize: 9,
+        padding: 3,
+        borderRadius: 10,
+        fontSize: 8,
         fontFamily: 'Helvetica-Bold',
         textAlign: 'center',
     },
@@ -228,15 +229,14 @@ const styles = StyleSheet.create({
     },
     // Signature and Terms Section
     footerSection: {
-        marginTop: 20,
-        padding: 12,
+        padding: 8,
         borderTop: 2,
         borderColor: '#d1d5db',
     },
     signatureRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 15,
+        marginBottom: 10,
     },
     signatureBox: {
         width: '45%',
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
         fontSize: 9,
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
-        marginBottom: 30,
+        marginBottom: 20,
     },
     signatureLine: {
         borderTop: 1,
@@ -276,9 +276,9 @@ const styles = StyleSheet.create({
         paddingLeft: 10,
     },
     footerNote: {
-        marginTop: 15,
+        marginTop: 8,
         textAlign: 'center',
-        fontSize: 8,
+        fontSize: 7,
         color: '#9ca3af',
         fontStyle: 'italic',
     },
@@ -294,16 +294,35 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     paymentModeBelow: {
-        width: '60%',
-        marginTop: 15,
+        flexDirection: 'row',
+        width: '100%',
+        marginTop: 10,
         marginLeft: 'auto',
+        alignItems: 'center',
     },
     termsSectionInline: {
         padding: 10,
         backgroundColor: '#f9fafb',
         borderRadius: 4,
         borderWidth: 1,
+
         borderColor: '#e5e7eb',
+    },
+    customerInfoText: {
+        paddingLeft: 5,
+    },
+    customerTextLine: {
+        fontSize: 10,
+        marginBottom: 4,
+        color: '#111827',
+    },
+    customerLabel: {
+        fontFamily: 'Helvetica-Bold',
+        color: '#374151',
+    },
+    customerValue: {
+        fontFamily: 'Helvetica',
+        color: '#111827',
     },
 });
 
@@ -371,52 +390,55 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                                     {new Date(invoice.created_at).toLocaleString('en-IN')}
                                 </Text>
                             </View>
+
+                            {/* GSTIN - Full Width */}
+                            {invoice.gstin && (
+                                <View style={styles.invoiceDetailsRow}>
+                                    <Text style={styles.invoiceLabel}>GSTIN: </Text>
+                                    <Text style={styles.invoiceValue}>
+                                        {invoice.gstin}
+                                    </Text>
+                                </View>
+                            )}
+                            
                         </View>
                     </View>
                 </View>
 
                 {/* Customer Details */}
                 <View style={styles.customerSection}>
-                    <Text style={styles.sectionTitle}>BILL TO</Text>
-                    <View style={styles.customerGrid}>
-                        <View style={styles.customerField}>
-                            <Text style={styles.fieldLabel}>Customer Name</Text>
-                            <View style={styles.fieldValue}>
-                                <Text>{customer?.name || 'N/A'}</Text>
+                    <View style={styles.customerInfoText}>
+                        <View style={styles.customerGrid}>
+                            {/* Left Column */}
+                            <View style={styles.customerColumn}>
+                                <Text style={styles.customerTextLine}>
+                                    <Text style={styles.customerLabel}>Name: </Text>
+                                    <Text style={styles.customerValue}>{customer?.name || 'N/A'}</Text>
+                                </Text>
+                                <Text style={styles.customerTextLine}>
+                                    <Text style={styles.customerLabel}>Phone: </Text>
+                                    <Text style={styles.customerValue}>{customer?.phone_number || 'N/A'}</Text>
+                                </Text>
+                            </View>
+
+                            {/* Right Column */}
+                            <View style={styles.customerColumn}>
+                                <Text style={styles.customerTextLine}>
+                                    <Text style={styles.customerLabel}>Vehicle / Mechanic: </Text>
+                                    <Text style={styles.customerValue}>{customer?.vehicle || 'N/A'}</Text>
+                                </Text>
+                                <Text style={styles.customerTextLine}>
+                                    <Text style={styles.customerLabel}>Address: </Text>
+                                    <Text style={styles.customerValue}>{customer?.address || 'N/A'}</Text>
+                                </Text>
                             </View>
                         </View>
-                        <View style={styles.customerField}>
-                            <Text style={styles.fieldLabel}>Phone Number</Text>
-                            <View style={styles.fieldValue}>
-                                <Text>{customer?.phone_number || 'N/A'}</Text>
-                            </View>
-                        </View>
-                        <View style={styles.customerField}>
-                            <Text style={styles.fieldLabel}>Address</Text>
-                            <View style={styles.fieldValue}>
-                                <Text>{customer?.address || 'N/A'}</Text>
-                            </View>
-                        </View>
-                        <View style={styles.customerField}>
-                            <Text style={styles.fieldLabel}>Vehicle Number</Text>
-                            <View style={styles.fieldValue}>
-                                <Text>{customer?.vehicle || 'N/A'}</Text>
-                            </View>
-                        </View>
-                        {invoice.gstin && (
-                            <View style={[styles.customerField, { width: '100%' }]}>
-                                <Text style={styles.fieldLabel}>GSTIN</Text>
-                                <View style={styles.fieldValue}>
-                                    <Text>{invoice.gstin}</Text>
-                                </View>
-                            </View>
-                        )}
+
                     </View>
                 </View>
 
                 {/* Items Table */}
                 <View style={styles.itemsSection}>
-                    <Text style={styles.sectionTitle}>ITEMS</Text>
                     <View style={styles.table}>
                         {/* Table Header */}
                         <View style={styles.tableHeader}>
@@ -509,16 +531,10 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                     {/* Signatures */}
                     <View style={styles.signatureRow}>
                         <View style={styles.signatureBox}>
-                            <Text style={styles.signatureLabel}>Customer Signature</Text>
-                            <View style={styles.signatureLine}>
-                                <Text style={styles.signatureText}>Signature & Date</Text>
-                            </View>
+                            <Text style={styles.signatureText}>Customer Signature</Text>
                         </View>
                         <View style={styles.signatureBox}>
-                            <Text style={styles.signatureLabel}>Authorized Signatory</Text>
-                            <View style={styles.signatureLine}>
-                                <Text style={styles.signatureText}>For Shiv Shakti Automobile</Text>
-                            </View>
+                            <Text style={styles.signatureText}>Authorized Signature</Text>
                         </View>
                     </View>
 
@@ -528,7 +544,7 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                     </Text>
                 </View>
             </Page>
-        </Document>
+        </Document >
     );
 };
 

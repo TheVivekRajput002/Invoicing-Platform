@@ -369,6 +369,7 @@ useEffect(() => {
             // 🆕 Generate PDF component
             const pdfComponent = (
                 <InvoicePDF
+                    pageHead="Estimate"
                     invoice={invoiceData}
                     customer={{
                         name: customerDetails.customerName,

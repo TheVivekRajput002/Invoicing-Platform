@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from "react-router-dom";
-import { Search as SearchIcon, Plus } from 'lucide-react'
+import { Search as SearchIcon, Plus,Home } from 'lucide-react'
 
 const Billing = () => {
 
@@ -13,6 +13,7 @@ const Billing = () => {
         <div className=" mx-auto">
           <h1 className="text-4xl text-center font-bold text-gray-900 mt-8">Billing</h1>
 
+<div className='flex gap-8'>
 
           {/* invoice box  */}
           <div className='border mt-10 border-gray-600 py-6 px-8 w-fit gap-3 flex flex-col rounded-md'>
@@ -45,6 +46,8 @@ const Billing = () => {
             </div>
           </div>
 
+          {/* estimate box  */}
+
           <div className='border mt-10 border-gray-600 py-6 px-8 w-fit gap-3 flex flex-col rounded-md'>
             <p className='font-semibold text-3xl'>ESTIMATE</p>
             <div className='flex flex-col gap-3'>
@@ -70,6 +73,7 @@ const Billing = () => {
               </button>
             </div>
           </div>
+</div>
 
 
         </div>

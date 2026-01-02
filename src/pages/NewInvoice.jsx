@@ -30,7 +30,6 @@ const InvoiceGenerator = () => {
     const [saving, setSaving] = useState(false);
     const [invoiceSaved, setInvoiceSaved] = useState(false);
     const [savedInvoiceData, setSavedInvoiceData] = useState(null);
-    const [invoiceNumber, setInvoiceNumber] = useState('Loading...');
 
     // Customer states
     const [customerDetails, setCustomerDetails] = useState({
@@ -56,6 +55,7 @@ const InvoiceGenerator = () => {
     const [productSearchResults, setProductSearchResults] = useState({});
     const [showProductDropdown, setShowProductDropdown] = useState({});
     const [searchingProduct, setSearchingProduct] = useState({});
+    const [invoiceNumber, setInvoiceNumber] = useState('Loading...');
 
     const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
@@ -76,31 +76,28 @@ const InvoiceGenerator = () => {
     };
 
     useEffect(() => {
-    const fetchNextInvoiceNumber = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('invoices')
-                .select('invoice_number')
-                .order('created_at', { ascending: false })
-                .limit(1);
+        const fetchNextInvoiceNumber = async () => {
+            try {
+                // Get the current counter value
+                const { data, error } = await supabase
+                    .from('invoice_counter')
+                    .select('current_number')
+                    .eq('id', 1)
+                    .single();
 
-            if (error) throw error;
+                if (error) throw error;
 
-            if (data && data.length > 0) {
-                const lastNumber = parseInt(data[0].invoice_number.replace('INV', ''));
-                const nextNumber = lastNumber + 1;
+                // Preview the next number (current + 1)
+                const nextNumber = (data.current_number || 0) + 1;
                 setInvoiceNumber(`INV${String(nextNumber).padStart(3, '0')}`);
-            } else {
+            } catch (error) {
+                console.error('Error fetching invoice number:', error);
                 setInvoiceNumber('INV001');
             }
-        } catch (error) {
-            console.error('Error fetching invoice number:', error);
-            setInvoiceNumber('INV001');
-        }
-    };
+        };
 
-    fetchNextInvoiceNumber();
-}, []);
+        fetchNextInvoiceNumber();
+    }, []);
 
     // Initialize date
     useEffect(() => {
@@ -279,6 +276,17 @@ const InvoiceGenerator = () => {
         }
     };
 
+    const getNextInvoiceNumber = async () => {
+        try {
+            const { data, error } = await supabase.rpc('get_next_invoice_number');
+            if (error) throw error;
+            return `${data}`; // Format as INV001, INV002, etc.
+        } catch (error) {
+            console.error('Error generating invoice number:', error);
+            throw error;
+        }
+    };
+
     // Deduct stock
     const deductStockForProducts = async (productsToDeduct) => {
         try {
@@ -337,7 +345,7 @@ const InvoiceGenerator = () => {
             const { data: invoiceData } = await supabase
                 .from('invoices')
                 .insert([{
-                    invoice_number:invoiceNumber,
+                    invoice_number: await getNextInvoiceNumber(),
                     customer_id: customerId,
                     bill_date: invoiceDate,
                     generated_by: 'system',
@@ -365,6 +373,7 @@ const InvoiceGenerator = () => {
             // 🆕 Generate PDF component
             const pdfComponent = (
                 <InvoicePDF
+                pageHead="Tax Invoice"
                     invoice={invoiceData}
                     customer={{
                         name: customerDetails.customerName,
@@ -376,16 +385,27 @@ const InvoiceGenerator = () => {
                 />
             );
 
-            // 🆕 Upload PDF and get URL
-            const pdfUrl = await uploadInvoicePDF(pdfComponent, invoiceData.invoice_number);
+            // 🆕 Upload PDF and get URL with error handling
+            let pdfUrl = null;
+            try {
+                pdfUrl = await uploadInvoicePDF(pdfComponent, invoiceData.invoice_number);
+                console.log('PDF URL:', pdfUrl); // Debug log
 
-            // 🆕 Send to WhatsApp
-            sendInvoiceToWhatsApp(
-                customerDetails.phoneNumber,
-                pdfUrl,
-                invoiceData.invoice_number,
-                grandTotal.toFixed(2)
-            );
+                if (pdfUrl) {
+                    // 🆕 Send to WhatsApp only if PDF was generated successfully
+                    await sendInvoiceToWhatsApp(
+                        customerDetails.phoneNumber,
+                        pdfUrl,
+                        invoiceData.invoice_number,
+                        grandTotal.toFixed(2)
+                    );
+                } else {
+                    console.warn('PDF URL is null, skipping WhatsApp send');
+                }
+            } catch (pdfError) {
+                console.error('PDF generation/upload error:', pdfError);
+                alert('Invoice saved but PDF generation failed: ' + pdfError.message);
+            }
 
             setSavedInvoiceData({
                 invoice: invoiceData,
@@ -396,17 +416,40 @@ const InvoiceGenerator = () => {
                     vehicle: customerDetails.vehicle
                 },
                 products: products,
-                pdfUrl: pdfUrl // 🆕 Store PDF URL
+                pdfUrl: pdfUrl // 🆕 Store PDF URL (may be null if failed)
             });
 
             setInvoiceSaved(true);
-            alert('Invoice saved successfully! Opening WhatsApp...');
+            alert('Invoice saved successfully!' + (pdfUrl ? ' Opening WhatsApp...' : ''));
 
-            // Reset form
+            // ✅ Reset form
             setCustomerDetails({ customerName: '', customerAddress: '', vehicle: '', phoneNumber: '' });
             setProducts([{ id: 1, serialNumber: 1, productName: '', hsnCode: '', quantity: '', rate: '', gstPercentage: 0, totalAmount: 0 }]);
             setPaymentMode('unpaid');
             setGstin('');
+
+            // ✅ Reset invoice saved flag after a delay
+            setTimeout(() => {
+                setInvoiceSaved(false);
+                setSavedInvoiceData(null);
+            }, 3000);
+
+            // ✅ Fetch updated invoice number preview
+            try {
+                const { data: counterData, error: counterError } = await supabase
+                    .from('invoice_counter')
+                    .select('current_number')
+                    .eq('id', 1)
+                    .single();
+
+                if (!counterError && counterData) {
+                    const nextNumber = (counterData.current_number || 0) + 1;
+                    setInvoiceNumber(`INV${String(nextNumber).padStart(3, '0')}`);
+                }
+            } catch (fetchError) {
+                console.error('Error fetching updated invoice number:', fetchError);
+            }
+
         } catch (error) {
             console.error('Error saving invoice:', error);
             alert('Error saving invoice: ' + error.message);

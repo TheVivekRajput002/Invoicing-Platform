@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     },
 });
 
-const InvoicePDF = ({ invoice, customer, products }) => {
+const InvoicePDF = ({pageHead, invoice, customer, products }) => {
     // Calculate totals
     const calculateSubtotal = () => {
         return products.reduce((sum, product) => {
@@ -357,7 +357,7 @@ const InvoicePDF = ({ invoice, customer, products }) => {
             <Page size="A4" style={styles.page}>
                 {/* Header Section */}
                 <View style={styles.headerContainer}>
-                    <Text style={styles.invoiceTitle}>TAX INVOICE</Text>
+                    <Text style={styles.invoiceTitle}>{pageHead}</Text>
                     <View style={styles.headerGrid}>
                         {/* Company Details */}
                         <View style={styles.companySection}>
@@ -378,7 +378,7 @@ const InvoicePDF = ({ invoice, customer, products }) => {
                         <View style={styles.invoiceSection}>
                             <View style={styles.invoiceDetailsRow}>
                                 <Text style={styles.invoiceLabel}>Invoice No:</Text>
-                                <Text style={styles.invoiceValue}>{invoice.invoice_number}</Text>
+                                <Text style={styles.invoiceValue}>{invoice.invoice_number || invoice.estimate_number}</Text>
                             </View>
                             <View style={styles.invoiceDetailsRow}>
                                 <Text style={styles.invoiceLabel}>Invoice Date:</Text>
