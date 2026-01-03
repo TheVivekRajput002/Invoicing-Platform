@@ -1,6 +1,6 @@
-import React from 'react'
+import React,{useState} from 'react'
 import { useNavigate } from "react-router-dom";
-import { Search as SearchIcon, Plus,Home } from 'lucide-react'
+import { Search as SearchIcon, Plus, Home } from 'lucide-react'
 
 const Billing = () => {
 
@@ -13,67 +13,64 @@ const Billing = () => {
         <div className=" mx-auto">
           <h1 className="text-4xl text-center font-bold text-gray-900 mt-8">Billing</h1>
 
-<div className='flex gap-8'>
+          <div className='flex gap-8'>
 
-          {/* invoice box  */}
-          <div className='border mt-10 border-gray-600 py-6 px-8 w-fit gap-3 flex flex-col rounded-md'>
-            <p className='font-semibold text-3xl'>INVOICE</p>
-            <div className='flex flex-col gap-3'>
+            {/* invoice box  */}
+            <div className='border mt-10 border-gray-600 py-6 px-8 w-fit gap-3 flex flex-col rounded-md'>
+              <p className='font-semibold text-3xl'>INVOICE</p>
+              <div className='flex flex-col gap-3'>
 
-              <button
-                onClick={() => navigate("/billing/invoice/search")}
-                className='bg-[#3480fb] border-1 py-3 px-6 text-white text-center border-gray-700 rounded-xl'>
-                <div className='flex gap-2'>
-                  <SearchIcon />
-                  <p>Search Invoice</p>
+                <button
+                  onClick={() => navigate("/billing/invoice/search")}
+                  className='bg-[#3480fb] border-1 py-3 px-6 text-white text-center border-gray-700 rounded-xl'>
+                  <div className='flex gap-2'>
+                    <SearchIcon />
+                    <p>Search Invoice</p>
+                  </div>
+                </button>
 
-                </div>
-              </button>
+                <button
+                  onClick={() => navigate("/billing/add/invoice")}
+                  className='border-2 py-3 px-6  text-center rounded-xl border-[#3480fb] text-[#3571d2] font-semibold'>
+                  <div className='flex gap-2'>
+                    <Plus />
+                    <p>
+                      New Invoice
+                    </p>
 
-              <button
-                onClick={() => navigate("/billing/invoice/new")}
-                className='border-2 py-3 px-6  text-center rounded-xl border-[#3480fb] text-[#3571d2] font-semibold'>
-                <div className='flex gap-2'>
-                  <Plus />
-                  <p>
-                    New Invoice
+                  </div>
+                </button>
+              </div>
+            </div>
 
-                  </p>
+            {/* estimate box  */}
 
+            <div className='border mt-10 border-gray-600 py-6 px-8 w-fit gap-3 flex flex-col rounded-md'>
+              <p className='font-semibold text-3xl'>ESTIMATE</p>
+              <div className='flex flex-col gap-3'>
 
-                </div>
-              </button>
+                <button
+                  onClick={() => navigate("/billing/estimate/search")}
+                  className='bg-[#3480fb] border-1 py-3 px-6 text-white text-center border-gray-700 rounded-xl'>
+                  <div className='flex gap-2'>
+                    <SearchIcon />
+                    <p>Search Estimate</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => navigate("/billing/add/estimate")}
+                  className='border-2 py-3 px-6  text-center rounded-xl border-[#3480fb] text-[#3571d2] font-semibold'>
+                  <div className='flex gap-2'>
+                    <Plus />
+                    <p>
+                      New Estimate
+                    </p>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
-
-          {/* estimate box  */}
-
-          <div className='border mt-10 border-gray-600 py-6 px-8 w-fit gap-3 flex flex-col rounded-md'>
-            <p className='font-semibold text-3xl'>ESTIMATE</p>
-            <div className='flex flex-col gap-3'>
-
-              <button
-                onClick={() => navigate("/billing/estimate/search")}
-                className='bg-[#3480fb] border-1 py-3 px-6 text-white text-center border-gray-700 rounded-xl'>
-                <div className='flex gap-2'>
-                  <SearchIcon />
-                  <p>Search Estimate</p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => navigate("/billing/estimate/add")}
-                className='border-2 py-3 px-6  text-center rounded-xl border-[#3480fb] text-[#3571d2] font-semibold'>
-                <div className='flex gap-2'>
-                  <Plus />
-                  <p>
-                    New Estimate
-                  </p>
-                </div>
-              </button>
-            </div>
-          </div>
-</div>
 
 
         </div>

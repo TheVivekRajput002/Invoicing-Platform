@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 // Import custom hooks
@@ -18,7 +18,11 @@ import { uploadInvoicePDF } from '../utils/uploadInvoicePDF';
 import { sendInvoiceToWhatsApp } from '../utils/sendWhatsApp';
 import InvoicePDF from '../components/InvoicePDF'; // Your existing PDF component
 
-const EstimateAdd = () => {
+const InvoiceGenerator = () => {
+
+    const { type } = useParams();
+    const isInvoice = type === 'invoice';
+
     const navigate = useNavigate();
     const inputRefs = useRef({});
 
@@ -56,6 +60,7 @@ const EstimateAdd = () => {
     const [productSearchResults, setProductSearchResults] = useState({});
     const [showProductDropdown, setShowProductDropdown] = useState({});
     const [searchingProduct, setSearchingProduct] = useState({});
+    const [invoiceNumber, setInvoiceNumber] = useState('Loading...');
 
     const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
@@ -75,36 +80,56 @@ const EstimateAdd = () => {
         return istTime.toISOString().split('T')[0];
     };
 
-    // Fetch next estimate number on component load
-useEffect(() => {
-    const fetchNextEstimateNumber = async () => {
-        try {
-            // Get the last estimate number from the database
-            const { data, error } = await supabase
-                .from('estimate')
-                .select('estimate_number')
-                .order('created_at', { ascending: false })
-                .limit(1);
+    useEffect(() => {
+        const fetchNextInvoiceNumber = async () => {
+            try {
 
-            if (error) throw error;
+                if (isInvoice) {
+                    // Get the current counter value
+                    const { data, error } = await supabase
+                        .from('invoice_counter')
+                        .select('current_number')
+                        .eq('id', 1)
+                        .single();
 
-            if (data && data.length > 0) {
-                // Extract number from last estimate (e.g., "EST001" -> 1)
-                const lastNumber = parseInt(data[0].estimate_number.replace('EST', ''));
-                const nextNumber = lastNumber + 1;
-                setEstimateNumber(`EST${String(nextNumber).padStart(3, '0')}`);
-            } else {
-                // First estimate
-                setEstimateNumber('EST001');
+                    if (error) throw error;
+
+                    const nextNumber = (data.current_number || 0) + 1;
+                    setInvoiceNumber(`INV${String(nextNumber).padStart(3, '0')}`);
+
+
+                } else {
+
+                    // Get the last estimate number from the database
+                    const { data, error } = await supabase
+                        .from('estimate')
+                        .select('estimate_number')
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        // Extract number from last estimate (e.g., "EST001" -> 1)
+                        const lastNumber = parseInt(data[0].estimate_number.replace('EST', ''));
+                        const nextNumber = lastNumber + 1;
+                        setEstimateNumber(`EST${String(nextNumber).padStart(3, '0')}`);
+                    } else {
+                        // First estimate
+                        setEstimateNumber('EST001');
+                    }
+                    // Fetch from estimate table (existing code from EstimateAdd.js)
+                }
+
+
+            } catch (error) {
+                console.error('Error fetching invoice number:', error);
+                setInvoiceNumber('INV001');
             }
-        } catch (error) {
-            console.error('Error fetching estimate number:', error);
-            setEstimateNumber('EST001');
-        }
-    };
+        };
 
-    fetchNextEstimateNumber();
-}, []);
+        fetchNextInvoiceNumber();
+    }, [isInvoice]);
 
     // Initialize date
     useEffect(() => {
@@ -170,7 +195,7 @@ useEffect(() => {
             if (product.productName && product.productName.length >= 2) {
                 timers[product.id] = setTimeout(() => {
                     searchProductsFromDB(product.productName, product.id);
-                }, 300);
+                }, 500);
             }
         });
 
@@ -283,6 +308,17 @@ useEffect(() => {
         }
     };
 
+    const getNextInvoiceNumber = async () => {
+        try {
+            const { data, error } = await supabase.rpc('get_next_invoice_number');
+            if (error) throw error;
+            return `${data}`; // Format as INV001, INV002, etc.
+        } catch (error) {
+            console.error('Error generating invoice number:', error);
+            throw error;
+        }
+    };
+
     // Deduct stock
     const deductStockForProducts = async (productsToDeduct) => {
         try {
@@ -339,9 +375,11 @@ useEffect(() => {
             }
 
             const { data: invoiceData } = await supabase
-                .from('estimate')
+                .from(isInvoice ? 'invoices' : 'estimate')
                 .insert([{
-                    
+                    ...(isInvoice
+                        ? { invoice_number: await getNextInvoiceNumber() }
+                        : { estimate_number: estimateNumber }),
                     customer_id: customerId,
                     bill_date: invoiceDate,
                     generated_by: 'system',
@@ -353,7 +391,9 @@ useEffect(() => {
                 .single();
 
             const itemsToInsert = products.map(product => ({
-                estimate_id: invoiceData.id,
+                ...(isInvoice
+                    ? { invoice_id: invoiceData.id }
+                    : { estimate_id: invoiceData.id }),
                 serial_number: product.serialNumber,
                 product_name: product.productName,
                 hsn_code: product.hsnCode,
@@ -363,13 +403,21 @@ useEffect(() => {
                 total_product: product.totalAmount
             }));
 
-            await supabase.from('estimate_items').insert(itemsToInsert);
+            const { error: itemsInsertError } = await supabase
+                .from(isInvoice ? 'invoice_items' : 'estimate_items')
+                .insert(itemsToInsert);
+
+            if (itemsInsertError) {
+                console.error('Error inserting items:', itemsInsertError);
+                throw new Error('Failed to save invoice items: ' + itemsInsertError.message);
+            }
             await deductStockForProducts(products);
+
 
             // 🆕 Generate PDF component
             const pdfComponent = (
                 <InvoicePDF
-                    pageHead="Estimate"
+                    pageHead={isInvoice ? "Tax Invoice" : "Estimate"}
                     invoice={invoiceData}
                     customer={{
                         name: customerDetails.customerName,
@@ -381,16 +429,27 @@ useEffect(() => {
                 />
             );
 
-            // 🆕 Upload PDF and get URL
-            const pdfUrl = await uploadInvoicePDF(pdfComponent, invoiceData.estimate_number);
+            // 🆕 Upload PDF and get URL with error handling
+            let pdfUrl = null;
+            try {
+                pdfUrl = await uploadInvoicePDF(pdfComponent, isInvoice ? invoiceData.invoice_number : invoiceData.estimate_number);
+                console.log('PDF URL:', pdfUrl); // Debug log
 
-            // 🆕 Send to WhatsApp
-            sendInvoiceToWhatsApp(
-                customerDetails.phoneNumber,
-                pdfUrl,
-                invoiceData.estimate_number,
-                grandTotal.toFixed(2)
-            );
+                if (pdfUrl) {
+                    // 🆕 Send to WhatsApp only if PDF was generated successfully
+                    await sendInvoiceToWhatsApp(
+                        customerDetails.phoneNumber,
+                        pdfUrl,
+                        isInvoice ? invoiceData.invoice_number : invoiceData.estimate_number,
+                        grandTotal.toFixed(2)
+                    );
+                } else {
+                    console.warn('PDF URL is null, skipping WhatsApp send');
+                }
+            } catch (pdfError) {
+                console.error('PDF generation/upload error:', pdfError);
+                alert('Invoice saved but PDF generation failed: ' + pdfError.message);
+            }
 
             setSavedInvoiceData({
                 invoice: invoiceData,
@@ -401,17 +460,43 @@ useEffect(() => {
                     vehicle: customerDetails.vehicle
                 },
                 products: products,
-                pdfUrl: pdfUrl // 🆕 Store PDF URL
+                pdfUrl: pdfUrl // 🆕 Store PDF URL (may be null if failed)
             });
 
             setInvoiceSaved(true);
-            alert('Invoice saved successfully! Opening WhatsApp...');
+            alert(`${isInvoice ? 'Invoice' : 'Estimate'} saved successfully!` + (pdfUrl ? ' Opening WhatsApp...' : ''));
 
-            // Reset form
+            // ✅ Reset form
             setCustomerDetails({ customerName: '', customerAddress: '', vehicle: '', phoneNumber: '' });
             setProducts([{ id: 1, serialNumber: 1, productName: '', hsnCode: '', quantity: '', rate: '', gstPercentage: 0, totalAmount: 0 }]);
             setPaymentMode('unpaid');
             setGstin('');
+
+            // ✅ Reset invoice saved flag after a delay
+            setTimeout(() => {
+                setInvoiceSaved(false);
+                setSavedInvoiceData(null);
+            }, 3000);
+
+            // ✅ Fetch updated invoice number preview
+            // ✅ Fetch updated invoice number preview
+            if (isInvoice) {  // ✅ ADD THIS IF
+                try {
+                    const { data: counterData, error: counterError } = await supabase
+                        .from('invoice_counter')
+                        .select('current_number')
+                        .eq('id', 1)
+                        .single();
+
+                    if (!counterError && counterData) {
+                        const nextNumber = (counterData.current_number || 0) + 1;
+                        setInvoiceNumber(`INV${String(nextNumber).padStart(3, '0')}`);
+                    }
+                } catch (fetchError) {
+                    console.error('Error fetching updated invoice number:', fetchError);
+                }
+            }  // ✅ ADD THIS CLOSING BRACE
+
         } catch (error) {
             console.error('Error saving invoice:', error);
             alert('Error saving invoice: ' + error.message);
@@ -458,7 +543,6 @@ useEffect(() => {
 
     const canSave = customerDetails.customerName && customerDetails.phoneNumber && !phoneError && customerDetails.phoneNumber.length === 10;
 
-
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-8">
             <div className="max-w-6xl mx-auto">
@@ -470,7 +554,7 @@ useEffect(() => {
                 </button>
 
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <InvoiceHeader pageHead="ESTIMATE" invoiceNumber="Estimate No" invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} displayNumber={estimateNumber} />
+                    <InvoiceHeader pageHead={isInvoice ? "INVOICE" : "ESTIMATE"} invoiceNumber={isInvoice ? "Invoice No." : "Estimate No."} displayNumber={isInvoice ? invoiceNumber : estimateNumber} invoiceDate={invoiceDate} onInvoiceDateChange={setInvoiceDate} />
 
                     <CustomerDetailsForm
                         customerDetails={customerDetails}
@@ -522,4 +606,4 @@ useEffect(() => {
     );
 };
 
-export default EstimateAdd;
+export default InvoiceGenerator;

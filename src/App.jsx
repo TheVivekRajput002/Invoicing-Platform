@@ -2,11 +2,11 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 // import Search from './pages/Search';
 import Billing from './pages/Billing';
-import InvoiceAdd from './pages/InvoiceAdd';
+import InvoiceEstimateAdd from './pages/InvoiceEstimateAdd';
 import Data from './pages/Data';
 import CustomerEdit from './pages/CustomerEdit';
 import Header from './components/Header';
-import InvoiceViewEdit from './pages/InvoiceViewEdit';
+import InvoiceEstimateViewEdit from './pages/InvoiceEstimateViewEdit';
 import CustomerSearch from './pages/CustomerSearch';
 import InvoiceSearch from './pages/InvoiceSearch';
 import ProductSearch from './pages/ProductSearch';
@@ -18,7 +18,6 @@ import ProductViewEdit from './pages/ProductViewEdit'
 import CustomerViewEdit from './pages/CustomerViewEdit'
 import Customer from './pages/Customer'
 import CustomerAdd from './pages/CustomerAdd'
-import EstimateAdd from './pages/EstimateAdd'
 import EstimateSearch from './pages/EstimateSearch'
 
 function App() {
@@ -42,17 +41,15 @@ function App() {
             <Route path='/product/add' element={<ProductAdd />} />
             <Route path='/product' element={<Product />} />
 
-            <Route path='/billing/invoice/search' element={<InvoiceSearch />} />
-            <Route path='/billing/invoice/new' element={<InvoiceAdd />} />
-
-            <Route path='/billing/invoice/:id' element={<InvoiceViewEdit />} />
             <Route path='/customer/edit/:id' element={<CustomerEdit />} />
             <Route path='/test' element={<TestPage />} />
             <Route path="/product/:productId" element={<ProductViewEdit />} />
             <Route path="/customer/:customerId" element={<CustomerViewEdit />} />
-            <Route path="/billing/estimate/add" element={<EstimateAdd />} />
             <Route path="/billing/estimate/search" element={<EstimateSearch />} />
+            <Route path='/billing/invoice/search' element={<InvoiceSearch />} />
 
+            <Route path='/billing/:type/:id' element={<InvoiceEstimateViewEdit />} />
+            <Route path='/billing/add/:type' element={<InvoiceEstimateAdd />} />
           </Routes>
         </main>
       </div>
