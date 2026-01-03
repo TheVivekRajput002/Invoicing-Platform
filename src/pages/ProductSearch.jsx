@@ -145,7 +145,7 @@ const ProductSearch = () => {
         <div className="min-h-screen bg-gray-50 p-4 md:p-6">
             {/* Back Button */}
             <button
-                onClick={() => window.history.back()}
+                onClick={() => navigate("/product")}
                 className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

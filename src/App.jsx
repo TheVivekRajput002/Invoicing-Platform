@@ -2,11 +2,11 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 // import Search from './pages/Search';
 import Billing from './pages/Billing';
-import NewInvoice from './pages/NewInvoice';
+import InvoiceAdd from './pages/InvoiceAdd';
 import Data from './pages/Data';
-import EditCustomer from './pages/EditCustomer';
+import CustomerEdit from './pages/CustomerEdit';
 import Header from './components/Header';
-import ViewEditInvoice from './pages/ViewEditInvoice';
+import InvoiceViewEdit from './pages/InvoiceViewEdit';
 import CustomerSearch from './pages/CustomerSearch';
 import InvoiceSearch from './pages/InvoiceSearch';
 import ProductSearch from './pages/ProductSearch';
@@ -43,10 +43,10 @@ function App() {
             <Route path='/product' element={<Product />} />
 
             <Route path='/billing/invoice/search' element={<InvoiceSearch />} />
-            <Route path='/billing/invoice/new' element={<NewInvoice />} />
+            <Route path='/billing/invoice/new' element={<InvoiceAdd />} />
 
-            <Route path='/billing/invoice/:id' element={<ViewEditInvoice />} />
-            <Route path='/customer/edit/:id' element={<EditCustomer />} />
+            <Route path='/billing/invoice/:id' element={<InvoiceViewEdit />} />
+            <Route path='/customer/edit/:id' element={<CustomerEdit />} />
             <Route path='/test' element={<TestPage />} />
             <Route path="/product/:productId" element={<ProductViewEdit />} />
             <Route path="/customer/:customerId" element={<CustomerViewEdit />} />

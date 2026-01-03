@@ -112,7 +112,7 @@ const AddCustomer = () => {
             <div className="max-w-3xl mx-auto">
                 {/* Back Button */}
                 <button
-                    onClick={() => navigate('/customer/search')}
+                    onClick={() => navigate('/customer')}
                     className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
                 >
                     <ArrowLeft size={20} />

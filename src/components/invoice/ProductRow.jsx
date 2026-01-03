@@ -132,8 +132,11 @@ const ProductRow = ({
                                                 {item.product_name}
                                             </p>
                                             <div className="flex gap-3 mt-1">
-                                                <span className="text-xs text-gray-600">
-                                                    HSN: {item.hsn_code}
+                                                <span className={`text-xs font-medium ${item.current_stock <= item.minimum_stock
+                                                        ? 'text-orange-600'
+                                                        : 'text-green-600'
+                                                    }`}>
+                                                    Stock: {item.current_stock}
                                                 </span>
                                                 <span className="text-xs text-gray-600">
                                                     GST: {item.gst_rate}%

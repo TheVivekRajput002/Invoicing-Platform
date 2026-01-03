@@ -201,7 +201,29 @@ const CustomerSearch = () => {
     const activeTags = getActiveFilterTags();
 
     return (
+
         <div className="bg-gray-50 p-4 md:p-6 min-h-screen">
+            {/* Back Button */}
+            {/* Back Button */}
+            <button
+                onClick={() => navigate('/customer')}
+                className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+                <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                    />
+                </svg>
+                <span className="font-medium">Back</span>
+            </button>
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold text-gray-900 mb-6">Customer Search</h1>
 

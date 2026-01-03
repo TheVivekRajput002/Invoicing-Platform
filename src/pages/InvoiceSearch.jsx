@@ -253,7 +253,7 @@ const InvoiceSearch = () => {
                 
                 {/* Back Button */}
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/billing')}
                     className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
                 >
                     <svg
