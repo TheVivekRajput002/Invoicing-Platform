@@ -9,10 +9,7 @@ const AddProduct = () => {
         vehicle_model: '',
         hsn_code: '',
         brand: '',
-        base_rate: '',
         purchase_rate: '',
-        gst_rate: '',
-        discount: '0',
         current_stock: '0',
         minimum_stock: '0'
     });
@@ -24,7 +21,6 @@ const AddProduct = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
-    const [autoCalculate, setAutoCalculate] = useState(true);
 
     useEffect(() => {
         fetchSuggestions();
@@ -49,29 +45,8 @@ const AddProduct = () => {
         }
     };
 
-
-    useEffect(() => {
-        if (autoCalculate && formData.purchase_rate && formData.gst_rate) {
-            const purchaseRate = parseFloat(formData.purchase_rate);
-            const gstRate = parseFloat(formData.gst_rate);
-            const discount = parseFloat(formData.discount) || 0;
-
-            const finalRate = purchaseRate + (gstRate) - (discount);
-
-            setFormData(prev => ({
-                ...prev,
-                base_rate: finalRate.toFixed(2)
-            }));
-        }
-    }, [formData.purchase_rate, formData.gst_rate, formData.discount, autoCalculate]);
-
     const handleChange = (e) => {
         const { name, value } = e.target;
-
-        // If user manually changes base_rate, disable auto-calculation
-        if (name === 'base_rate') {
-            setAutoCalculate(false);
-        }
 
         // Show suggestions for brand
         if (name === 'brand') {
@@ -100,7 +75,7 @@ const AddProduct = () => {
     };
 
     const validateForm = () => {
-        const required = ['product_name', 'hsn_code', 'base_rate', 'purchase_rate', 'gst_rate'];
+        const required = ['product_name', 'hsn_code', 'purchase_rate'];
         for (let field of required) {
             if (!formData[field]) {
                 setMessage({ type: 'error', text: `${field.replace('_', ' ')} is required` });
@@ -135,10 +110,7 @@ const AddProduct = () => {
                 vehicle_model: '',
                 hsn_code: '',
                 brand: '',
-                base_rate: '',
                 purchase_rate: '',
-                gst_rate: '',
-                discount: '0',
                 current_stock: '0',
                 minimum_stock: '0'
             });
@@ -319,25 +291,7 @@ const AddProduct = () => {
                             />
                         </div>
 
-                        {/* GST Rate */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                GST Rate (%) <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                name="gst_rate"
-                                value={formData.gst_rate}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            >
-                                <option value="">Select GST Rate</option>
-                                <option value="0">0%</option>
-                                <option value="5">5%</option>
-                                <option value="12">12%</option>
-                                <option value="18">18%</option>
-                                <option value="28">28%</option>
-                            </select>
-                        </div>
+                
 
                         {/* Purchase Rate */}
                         <div>
@@ -351,44 +305,6 @@ const AddProduct = () => {
                                 value={formData.purchase_rate}
                                 onChange={handleChange}
                                 placeholder="Cost price"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            />
-                        </div>
-
-                        {/* Base Rate */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Selling Rate (₹) <span className="text-red-500">*</span>
-                                {autoCalculate && (
-                                    <span className="ml-2 text-xs text-green-600">(Auto-calculated)</span>
-                                )}
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                name="base_rate"
-                                value={formData.base_rate}
-                                onChange={handleChange}
-                                onFocus={() => setAutoCalculate(false)}
-                                placeholder="Selling price"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            />
-
-                        </div>
-
-
-                        {/* Discount */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Discount (%)
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                name="discount"
-                                value={formData.discount}
-                                onChange={handleChange}
-                                placeholder="0"
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             />
                         </div>
@@ -424,16 +340,6 @@ const AddProduct = () => {
                         </div>
                     </div>
 
-                    {/* Profit Margin Display */}
-                    {profitMargin > 0 && (
-                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                            <p className="text-sm text-gray-600 mb-1">Profit Margin</p>
-                            <p className="text-2xl font-bold text-blue-600">
-                                ₹{profitMargin.toFixed(2)}
-                                <span className="text-sm ml-2">({profitPercentage}%)</span>
-                            </p>
-                        </div>
-                    )}
 
                     {/* Submit Button */}
                     <div className="mt-6">

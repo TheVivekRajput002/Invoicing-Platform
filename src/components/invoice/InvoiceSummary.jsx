@@ -35,7 +35,6 @@ const InvoiceSummary = ({
                         {/* GST Distribution */}
                         {gstDistribution && gstDistribution.length > 0 && (
                             <div className="border-2 border-gray-200 rounded-lg p-3 bg-gray-50">
-                                <h4 className="text-xs font-bold text-gray-700 mb-2 uppercase">GST Breakdown</h4>
 
                                 {gstDistribution.map((gst, index) => (
                                     <div key={index} className="mb-3 last:mb-0">

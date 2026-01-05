@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     col7: { width: '20%', textAlign: 'right' },
     // Total Section
     totalSection: {
-        padding: 8,
+        padding: 3,
         backgroundColor: '#f9fafb',
     },
     totalGrid: {
@@ -257,34 +257,12 @@ const styles = StyleSheet.create({
         color: '#6b7280',
         textAlign: 'center',
     },
-    termsSection: {
-        marginTop: 15,
-        padding: 10,
-        backgroundColor: '#f9fafb',
-        borderRadius: 4,
-    },
-    termsTitle: {
-        fontSize: 10,
-        fontFamily: 'Helvetica-Bold',
-        color: '#1f2937',
-        marginBottom: 8,
-    },
-    termItem: {
-        fontSize: 8,
-        color: '#4b5563',
-        marginBottom: 4,
-        paddingLeft: 10,
-    },
     footerNote: {
         marginTop: 8,
         textAlign: 'center',
         fontSize: 7,
         color: '#9ca3af',
         fontStyle: 'italic',
-    },
-    termsPlaceholder: {
-        width: '50%',
-        paddingRight: 10,
     },
     totalsContainer: {
         width: '50%',
@@ -300,13 +278,31 @@ const styles = StyleSheet.create({
         marginLeft: 'auto',
         alignItems: 'center',
     },
-    termsSectionInline: {
+    termsSection: {
+        marginTop: 15,
         padding: 10,
         backgroundColor: '#f9fafb',
         borderRadius: 4,
-        borderWidth: 1,
-
-        borderColor: '#e5e7eb',
+    },
+    termsTitle: {
+        fontSize: 10,
+        fontFamily: 'Helvetica-Bold',
+        color: '#1f2937',
+        marginBottom: 8,
+    },
+    termItem: {
+        fontSize: 8,
+        color: '#4b5563',
+        marginBottom: 2,
+        paddingLeft: 10,
+    },
+    termsPlaceholder: {
+        width: '50%',
+        paddingRight: 10,
+    },
+    termsSectionInline: {
+        padding: 6,
+        backgroundColor: '#f9fafb',
     },
     customerInfoText: {
         paddingLeft: 5,
@@ -326,27 +322,20 @@ const styles = StyleSheet.create({
     },
     // Add these new styles in your StyleSheet.create()
     gstBreakdownBox: {
-        borderWidth: 2,
+        borderWidth: 1,
         borderColor: '#e5e7eb',
         borderRadius: 4,
-        padding: 8,
+        padding: 6,
         backgroundColor: '#f9fafb',
-        marginBottom: 8,
-    },
-    gstBreakdownTitle: {
-        fontSize: 8,
-        fontFamily: 'Helvetica-Bold',
-        color: '#374151',
-        marginBottom: 6,
-        textTransform: 'uppercase',
+        marginBottom: 4,
     },
     gstBreakdownItem: {
-        marginBottom: 8,
+        marginBottom: 4,
     },
     gstBreakdownHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     gstRateLabel: {
         fontSize: 8,
@@ -380,8 +369,8 @@ const styles = StyleSheet.create({
     gstSummaryRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingTop: 6,
-        marginTop: 6,
+        paddingTop: 4,
+        marginTop: 3,
         borderTop: 1,
         borderColor: '#d1d5db',
     },
@@ -598,70 +587,65 @@ const InvoicePDF = ({ isInvoice, pageHead, invoice, customer, products, gstInclu
                 <View style={styles.totalSection}>
                     <View style={styles.totalGrid}>
 
-                        {/* Left side - Terms and Conditions */}
+                        {/* Left side - Terms and Conditions + GST Breakdown */}
                         <View style={styles.termsPlaceholder}>
-                            <View style={styles.termsSectionInline}>
-
-                                <Text style={styles.termsTitle}>Terms & Conditions</Text>
+                            
+                            <View style={{ ...styles.termsSectionInline, padding: 6, paddingTop: 0, paddingBottom: 0 }}>
+                                <Text style={{ ...styles.termsTitle, marginBottom: 4 }}>Terms & Conditions</Text>
                                 <Text style={styles.termItem}>
                                     • Errors and omissions are subject to correction.
                                 </Text>
                                 <Text style={styles.termItem}>
                                     • Goods once sold will not be taken back or exchanged.
                                 </Text>
-                                <Text style={styles.termItem}>
+                                <Text style={{ ...styles.termItem, marginBottom: 0 }}>
                                     • Subject to Vidisha Jurisdiction.
                                 </Text>
-
                             </View>
+
+                            {/* GST BREAKDOWN */}
+                            {calculateGSTDistribution().length > 0 && (
+                                <View style={{ ...styles.gstBreakdownBox, marginTop: 6 }}>
+                                    {calculateGSTDistribution().map((gst, index) => (
+                                        <View key={index} style={styles.gstBreakdownItem}>
+                                            <View style={styles.gstBreakdownHeader}>
+                                                <Text style={styles.gstRateLabel}>GST @ {gst.rate}%</Text>
+                                                <Text style={styles.gstTotalAmount}>₹{gst.totalGst.toFixed(2)}</Text>
+                                            </View>
+
+                                            <View style={styles.gstDetailsGrid}>
+                                                <View style={styles.gstDetailBox}>
+                                                    <Text style={styles.gstDetailLabel}>Taxable</Text>
+                                                    <Text style={styles.gstDetailValue}>₹{gst.taxableAmount.toFixed(2)}</Text>
+                                                </View>
+                                                <View style={styles.gstDetailBox}>
+                                                    <Text style={styles.gstDetailLabel}>CGST</Text>
+                                                    <Text style={styles.gstDetailValue}>₹{gst.cgst.toFixed(2)}</Text>
+                                                </View>
+                                                <View style={styles.gstDetailBox}>
+                                                    <Text style={styles.gstDetailLabel}>SGST</Text>
+                                                    <Text style={styles.gstDetailValue}>₹{gst.sgst.toFixed(2)}</Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    ))}
+
+                                    <View style={styles.gstSummaryRow}>
+                                        <Text style={styles.gstSummaryLabel}>Total GST:</Text>
+                                        <Text style={styles.gstSummaryValue}>₹{calculateTotalGST().toFixed(2)}</Text>
+                                    </View>
+                                </View>
+                            )}
                         </View>
 
                         {/* Right side - Totals and Payment */}
                         <View style={styles.totalsContainer}>
-
                             {/* Totals */}
                             <View style={styles.totalsBox}>
                                 <View style={styles.totalRow}>
                                     <Text style={styles.totalLabel}>Subtotal:</Text>
                                     <Text style={styles.totalValue}>₹{calculateSubtotal().toFixed(2)}</Text>
                                 </View>
-
-                                {/* 🆕 GST BREAKDOWN - ADD THIS */}
-                                {calculateGSTDistribution().length > 0 && (
-                                    <View style={styles.gstBreakdownBox}>
-                                        <Text style={styles.gstBreakdownTitle}>GST Breakdown</Text>
-
-                                        {calculateGSTDistribution().map((gst, index) => (
-                                            <View key={index} style={styles.gstBreakdownItem}>
-                                                <View style={styles.gstBreakdownHeader}>
-                                                    <Text style={styles.gstRateLabel}>GST @ {gst.rate}%</Text>
-                                                    <Text style={styles.gstTotalAmount}>₹{gst.totalGst.toFixed(2)}</Text>
-                                                </View>
-
-                                                <View style={styles.gstDetailsGrid}>
-                                                    <View style={styles.gstDetailBox}>
-                                                        <Text style={styles.gstDetailLabel}>Taxable</Text>
-                                                        <Text style={styles.gstDetailValue}>₹{gst.taxableAmount.toFixed(2)}</Text>
-                                                    </View>
-                                                    <View style={styles.gstDetailBox}>
-                                                        <Text style={styles.gstDetailLabel}>CGST</Text>
-                                                        <Text style={styles.gstDetailValue}>₹{gst.cgst.toFixed(2)}</Text>
-                                                    </View>
-                                                    <View style={styles.gstDetailBox}>
-                                                        <Text style={styles.gstDetailLabel}>SGST</Text>
-                                                        <Text style={styles.gstDetailValue}>₹{gst.sgst.toFixed(2)}</Text>
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        ))}
-
-                                        <View style={styles.gstSummaryRow}>
-                                            <Text style={styles.gstSummaryLabel}>Total GST:</Text>
-                                            <Text style={styles.gstSummaryValue}>₹{calculateTotalGST().toFixed(2)}</Text>
-                                        </View>
-                                    </View>
-                                )}
-                                {/* 🆕 END GST BREAKDOWN */}
 
                                 <View style={styles.grandTotalRow}>
                                     <Text style={styles.grandTotalLabel}>GRAND TOTAL:</Text>
@@ -687,7 +671,6 @@ const InvoicePDF = ({ isInvoice, pageHead, invoice, customer, products, gstInclu
                                     </View>
                                 </View>
                             ) : ""}
-
                         </View>
                     </View>
                 </View>

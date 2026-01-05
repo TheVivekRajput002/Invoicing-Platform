@@ -15,7 +15,9 @@ const ProductsTable = ({
     productSearchResults,
     showProductDropdown,
     searchingProduct,
-    onDropdownToggle
+    onDropdownToggle,
+    productsFromDB,
+    newlyAddedProducts
 }) => {
     return (
         <div className="p-6 max-md:py-3 max-md:px-6">
@@ -70,6 +72,8 @@ const ProductsTable = ({
                                     onProductSelect={onProductSelect}
                                     onDropdownToggle={onDropdownToggle}
                                     canRemove={products.length > 1}
+                                    productsFromDB={productsFromDB}
+                                    newlyAdded={newlyAddedProducts.has(product.productName)}
                                 />
                             ))}
                         </tbody>

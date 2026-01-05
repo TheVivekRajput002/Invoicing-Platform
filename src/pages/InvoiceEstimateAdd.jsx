@@ -18,6 +18,8 @@ import { uploadInvoicePDF } from '../utils/uploadInvoicePDF';
 import { sendInvoiceToWhatsApp } from '../utils/sendWhatsApp';
 import InvoicePDF from '../components/InvoicePDF'; // Your existing PDF component
 
+import { ToastContainer } from '../components/invoice/Toast';
+
 const InvoiceGenerator = () => {
 
     const { type } = useParams();
@@ -35,6 +37,38 @@ const InvoiceGenerator = () => {
     const [invoiceSaved, setInvoiceSaved] = useState(false);
     const [savedInvoiceData, setSavedInvoiceData] = useState(null);
     const [estimateNumber, setEstimateNumber] = useState('Loading...');
+
+    // toast 
+    const [toasts, setToasts] = useState([]);
+    const [newlyAddedProducts, setNewlyAddedProducts] = useState(new Set());
+
+// In InvoiceGenerator component, update the addToast function:
+const addToast = (productDetails) => {
+    console.log('📢 addToast called with:', productDetails);
+    const newToast = {
+        id: Date.now(),
+        productDetails: productDetails
+    };
+    console.log('📦 Creating toast:', newToast);
+    setToasts(prev => {
+        console.log('Previous toasts:', prev);
+        const updated = [...prev, newToast];
+        console.log('Updated toasts:', updated);
+        return updated;
+    });
+};
+
+    // In InvoiceGenerator, add this useEffect after the addToast function:
+    useEffect(() => {
+        if (toasts.length > 0) {
+            console.log('🎉 Toast created:', toasts);
+        }
+    }, [toasts]);
+
+    const removeToast = (id) => {
+        setToasts(prev => prev.filter(toast => toast.id !== id));
+    };
+
 
     // Customer states
     const [customerDetails, setCustomerDetails] = useState({
@@ -67,7 +101,10 @@ const InvoiceGenerator = () => {
     // Custom hooks
     const { searching: searchingCustomer, found: customerFound, customerData, searchResults: customerSearchResults } = useCustomerSearch(customerDetails.phoneNumber);
     const { calculateProductTotal, subtotal, totalGST, grandTotal } = useInvoiceCalculations(products, gstIncluded);
-    useProductAutoSave(products, productsFromDB);
+    useProductAutoSave(products, productsFromDB, (productDetails) => {
+        addToast(productDetails);
+        setNewlyAddedProducts(prev => new Set([...prev, productDetails.name]));
+    });
 
     const calculateGSTDistribution = () => {
         const distribution = {};
@@ -309,7 +346,7 @@ const InvoiceGenerator = () => {
                     ...product,
                     productName: selectedProduct.product_name,
                     hsnCode: selectedProduct.hsn_code,
-                    rate: selectedProduct.base_rate,
+                    rate: selectedProduct.purchase_rate,
                     gstPercentage: selectedProduct.gst_rate || 0
                 };
 
@@ -479,12 +516,13 @@ const InvoiceGenerator = () => {
 
                 if (pdfUrl) {
                     // 🆕 Send to WhatsApp only if PDF was generated successfully
-                    await sendInvoiceToWhatsApp(
-                        customerDetails.phoneNumber,
-                        pdfUrl,
-                        isInvoice ? invoiceData.invoice_number : invoiceData.estimate_number,
-                        grandTotal.toFixed(2)
-                    );
+                    // await sendInvoiceToWhatsApp(
+                    //     customerDetails.phoneNumber,
+                    //     pdfUrl,
+                    //     isInvoice ? invoiceData.invoice_number : invoiceData.estimate_number,
+                    //     grandTotal.toFixed(2)
+                    // );
+                    console.log('PDF generated successfully:', pdfUrl);
                 } else {
                     console.warn('PDF URL is null, skipping WhatsApp send');
                 }
@@ -507,7 +545,8 @@ const InvoiceGenerator = () => {
             });
 
             setInvoiceSaved(true);
-            alert(`${isInvoice ? 'Invoice' : 'Estimate'} saved successfully!` + (pdfUrl ? ' Opening WhatsApp...' : ''));
+            alert(`${isInvoice ? 'Invoice' : 'Estimate'} saved successfully!`);
+            setNewlyAddedProducts(new Set());
 
             // ✅ Reset form
             setCustomerDetails({ customerName: '', customerAddress: '', vehicle: '', phoneNumber: '' });
@@ -629,6 +668,8 @@ const InvoiceGenerator = () => {
                         showProductDropdown={showProductDropdown}
                         searchingProduct={searchingProduct}
                         onDropdownToggle={(id, show) => setShowProductDropdown(prev => ({ ...prev, [id]: show }))}
+                        productsFromDB={productsFromDB}
+                        newlyAddedProducts={newlyAddedProducts}
                     />
 
                     <InvoiceSummary
@@ -647,6 +688,8 @@ const InvoiceGenerator = () => {
                     />
                 </div>
             </div>
+
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
         </div>
     );
 };

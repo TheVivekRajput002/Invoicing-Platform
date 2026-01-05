@@ -65,10 +65,9 @@ const ProductDetails = () => {
                     brand: editedProduct.brand,
                     vehicle_model: editedProduct.vehicle_model,
                     hsn_code: editedProduct.hsn_code,
-                    gst_rate: editedProduct.gst_rate,
+                    
                     purchase_rate: editedProduct.purchase_rate,
-                    base_rate: editedProduct.base_rate,
-                    discount: editedProduct.discount,
+                  
                     minimum_stock: editedProduct.minimum_stock
                 })
                 .eq('id', productId);
@@ -275,7 +274,7 @@ const ProductDetails = () => {
                             )}
                         </div>
 
-                        {/* HSN & GST */}
+                        {/* HSN */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="p-4 bg-gray-50 rounded-lg">
                                 <p className="text-sm text-gray-600 mb-1">HSN Code</p>
@@ -290,24 +289,7 @@ const ProductDetails = () => {
                                     <p className="font-semibold text-lg">{product.hsn_code}</p>
                                 )}
                             </div>
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600 mb-1">GST Rate</p>
-                                {isEditing ? (
-                                    <select
-                                        value={editedProduct.gst_rate}
-                                        onChange={(e) => handleEditChange('gst_rate', parseFloat(e.target.value))}
-                                        className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg font-semibold focus:ring-2 focus:ring-purple-500"
-                                    >
-                                        <option value="0">0%</option>
-                                        <option value="5">5%</option>
-                                        <option value="12">12%</option>
-                                        <option value="18">18%</option>
-                                        <option value="28">28%</option>
-                                    </select>
-                                ) : (
-                                    <p className="font-semibold text-lg">{product.gst_rate}%</p>
-                                )}
-                            </div>
+                            
                         </div>
 
                         {/* Pricing Section */}
@@ -327,42 +309,9 @@ const ProductDetails = () => {
                                         <span className="font-bold text-lg">₹{product.purchase_rate.toLocaleString()}</span>
                                     )}
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                                    <span className="text-gray-700 font-medium">GST Amount:</span>
-                                    <span className="font-bold text-lg text-blue-600">₹{product.gst_rate.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-gray-700 font-medium">Selling Rate:</span>
-                                    {isEditing ? (
-                                        <input
-                                            type="number"
-                                            value={editedProduct.base_rate}
-                                            onChange={(e) => handleEditChange('base_rate', parseFloat(e.target.value))}
-                                            className="w-32 px-3 py-1 border-2 border-purple-300 rounded-lg font-bold text-right focus:ring-2 focus:ring-purple-500"
-                                        />
-                                    ) : (
-                                        <span className="font-bold text-lg">₹{product.base_rate.toLocaleString()}</span>
-                                    )}
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-gray-700 font-medium">Discount:</span>
-                                    {isEditing ? (
-                                        <input
-                                            type="number"
-                                            value={editedProduct.discount}
-                                            onChange={(e) => handleEditChange('discount', parseFloat(e.target.value))}
-                                            className="w-24 px-3 py-1 border-2 border-purple-300 rounded-lg font-bold text-right focus:ring-2 focus:ring-purple-500"
-                                        />
-                                    ) : (
-                                        <span className="font-bold text-lg">{product.discount}%</span>
-                                    )}
-                                </div>
-                                <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                                    <span className="text-gray-700 font-medium">Profit Margin:</span>
-                                    <span className="font-bold text-2xl text-green-600">
-                                        ₹{(isEditing ? editedProduct.base_rate - editedProduct.purchase_rate : product.base_rate - product.purchase_rate).toFixed(2)}
-                                    </span>
-                                </div>
+                                
+                                
+                          
                             </div>
                         </div>
 

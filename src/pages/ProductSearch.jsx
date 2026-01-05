@@ -250,9 +250,9 @@ const ProductSearch = () => {
                 </div>
 
                 {/* Results Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1  gap-6">
                     {/* Product List */}
-                    <div className="lg:col-span-2">
+                    <div className="">
                         <div className="bg-white rounded-lg shadow-md p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -310,7 +310,7 @@ const ProductSearch = () => {
                                                     </div>
                                                     <div>
                                                         <p className="text-gray-600">HSN: <span className="font-medium">{product.hsn_code}</span></p>
-                                                        <p className="text-gray-600">GST: <span className="font-medium">{product.gst_rate}%</span></p>
+                                                      
                                                     </div>
                                                 </div>
 
@@ -324,7 +324,8 @@ const ProductSearch = () => {
                                                         </p>
                                                         <p className="text-sm">
                                                             <span className="text-gray-600">Price:</span>
-                                                            <span className="ml-1 font-semibold text-purple-600">₹{product.base_rate.toLocaleString()}</span>
+                                                            <span className="ml-1 font-semibold text-purple-600">₹{product.purchase_rate.toLocaleString()}</span>
+                                                           
                                                         </p>
                                                     </div>
                                                 </div>
@@ -336,20 +337,6 @@ const ProductSearch = () => {
                         </div>
                     </div>
 
-                    {/* Desktop Product Details Panel */}
-                    <div className="hidden lg:block">
-                        {selectedProduct ? (
-                            <div className="sticky top-6">
-                                <ProductDetails product={selectedProduct} />
-                            </div>
-                        ) : (
-                            <div className="bg-purple-50 rounded-lg p-8 text-center sticky top-6">
-                                <Package className="mx-auto text-purple-600 mb-3" size={48} />
-                                <h3 className="font-semibold text-gray-900 mb-2">Select a Product</h3>
-                                <p className="text-gray-600 text-sm">Click on a product to view detailed information</p>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
 

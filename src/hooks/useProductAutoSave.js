@@ -1,80 +1,80 @@
-import { useState, useEffect } from 'react';
+// hooks/useProductAutoSave.js
+import { useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
-export const useProductAutoSave = (products, productsFromDB) => {
-    const [autoSavedProducts, setAutoSavedProducts] = useState(new Set());
-
-    const autoSaveNewProduct = async (product) => {
-        if (!product.productName || !product.hsnCode || !product.rate) {
-            return;
-        }
-
-        const productKey = product.productName + product.hsnCode;
-
-        if (autoSavedProducts.has(productKey)) {
-            return;
-        }
-
-        try {
-            const { data: existing, error: searchError } = await supabase
-                .from('products')
-                .select('id')
-                .eq('product_name', product.productName)
-                .eq('hsn_code', product.hsnCode)
-                .maybeSingle();
-
-            if (searchError) throw searchError;
-
-            if (existing) {
-                console.log('Product already exists in DB:', product.productName);
-                return;
-            }
-
-            const { data: newProduct, error: insertError } = await supabase
-                .from('products')
-                .insert([{
-                    product_name: product.productName,
-                    hsn_code: product.hsnCode,
-                    base_rate: product.rate,
-                    purchase_rate: product.rate * 0.8,
-                    gst_rate: product.gstPercentage,
-                    current_stock: 0,
-                    minimum_stock: 5,
-                    brand: '',
-                    vehicle_model: ''
-                }])
-                .select()
-                .single();
-
-            if (insertError) throw insertError;
-
-            console.log('✅ New product auto-saved to inventory:', product.productName);
-            setAutoSavedProducts(prev => new Set([...prev, productKey]));
-
-        } catch (error) {
-            console.error('Error auto-saving product:', error);
-        }
-    };
+export const useProductAutoSave = (products, productsFromDB, onProductSaved) => {
+    const saveTimeouts = useRef({});
 
     useEffect(() => {
-        const checkAndSaveNewProducts = async () => {
-            for (const product of products) {
-                const isComplete = product.productName && product.hsnCode && product.rate;
-                const isFromDB = productsFromDB.has(product.id);
-                const alreadySaved = autoSavedProducts.has(product.productName + product.hsnCode);
+        products.forEach(product => {
+            console.log('Checking product:', product.productName, 'In DB?', productsFromDB.has(product.id));
+            
+            if (productsFromDB.has(product.id)) return;
+            if (!product.productName || !product.rate) return;
 
-                if (isComplete && !isFromDB && !alreadySaved) {
-                    await autoSaveNewProduct(product);
-                }
+            if (saveTimeouts.current[product.id]) {
+                clearTimeout(saveTimeouts.current[product.id]);
             }
+
+            saveTimeouts.current[product.id] = setTimeout(async () => {
+                try {
+                    console.log('🔍 Checking if product exists in DB:', product.productName);
+                    
+                    const { data: existingProduct } = await supabase
+                        .from('products')
+                        .select('id')
+                        .eq('product_name', product.productName)
+                        .eq('hsn_code', product.hsnCode)
+                        .maybeSingle();
+
+                    console.log('Existing product check result:', existingProduct);
+
+                    if (!existingProduct) {
+                        console.log('💾 Saving new product to DB:', product.productName);
+                        
+                        const { data: newProduct, error } = await supabase
+                            .from('products')
+                            .insert([{
+                                product_name: product.productName,
+                                hsn_code: product.hsnCode,
+                                purchase_rate: product.rate,
+                                current_stock: 0,
+                                minimum_stock: 5
+                            }])
+                            .select()
+                            .single();
+
+                        if (!error && newProduct) {
+                            console.log('✅ Product auto-saved:', newProduct);
+                            
+                            const productDetails = {
+                                name: product.productName,
+                                rate: product.rate,
+                                hsn: product.hsnCode,
+                                gst: product.gstPercentage
+                            };
+                            
+                            console.log('🚀 Calling onProductSaved with:', productDetails);
+                            
+                            if (onProductSaved) {
+                                onProductSaved(productDetails);
+                            } else {
+                                console.error('❌ onProductSaved callback is not defined!');
+                            }
+                        } else if (error) {
+                            console.error('❌ Error saving product:', error);
+                        }
+                    } else {
+                        console.log('⏭️ Product already exists, skipping:', product.productName);
+                    }
+                } catch (error) {
+                    console.error('❌ Error auto-saving product:', error);
+                }
+            }, 3000);
+        });
+
+        return () => {
+            Object.values(saveTimeouts.current).forEach(timeout => clearTimeout(timeout));
         };
-
-        const timer = setTimeout(() => {
-            checkAndSaveNewProducts();
-        }, 1000);
-
-        return () => clearTimeout(timer);
-    }, [products]);
-
-    return { autoSaveNewProduct };
+    }, [products, productsFromDB, onProductSaved]);
 };
