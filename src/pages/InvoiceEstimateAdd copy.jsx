@@ -69,46 +69,6 @@ const InvoiceGenerator = () => {
     const { calculateProductTotal, subtotal, totalGST, grandTotal } = useInvoiceCalculations(products, gstIncluded);
     useProductAutoSave(products, productsFromDB);
 
-    const calculateGSTDistribution = () => {
-        const distribution = {};
-
-        products.forEach(product => {
-            let baseAmount;
-            let gstAmount;
-
-            if (gstIncluded) {
-                // When GST is included in rate
-                const basePrice = product.rate / (1 + product.gstPercentage / 100);
-                baseAmount = product.quantity * basePrice;
-                gstAmount = (product.quantity * product.rate) - baseAmount;
-            } else {
-                // When GST is not included
-                baseAmount = product.quantity * product.rate;
-                gstAmount = (baseAmount * product.gstPercentage) / 100;
-            }
-
-            if (product.gstPercentage > 0) {
-                const gstKey = `${product.gstPercentage}%`;
-                if (!distribution[gstKey]) {
-                    distribution[gstKey] = {
-                        rate: product.gstPercentage,
-                        taxableAmount: 0,
-                        cgst: 0,
-                        sgst: 0,
-                        totalGst: 0
-                    };
-                }
-
-                distribution[gstKey].taxableAmount += baseAmount;
-                distribution[gstKey].cgst += gstAmount / 2;
-                distribution[gstKey].sgst += gstAmount / 2;
-                distribution[gstKey].totalGst += gstAmount;
-            }
-        });
-
-        return Object.values(distribution);
-    };
-
     // Helper function for IST date
     const getISTDate = (daysOffset = 0) => {
         const now = new Date();
@@ -193,11 +153,11 @@ const InvoiceGenerator = () => {
     useEffect(() => {
         setProducts(prev => prev.map(product => ({
             ...product,
-            gstPercentage: product.gstPercentage,
+            gstPercentage: gstIncluded ? 0 : product.gstPercentage, // Set GST to 0 when "With GST" is enabled
             totalAmount: calculateProductTotal(
                 product.quantity,
                 product.rate,
-                product.gstPercentage
+                gstIncluded ? 0 : product.gstPercentage
             )
         })));
     }, [gstIncluded]);
@@ -425,8 +385,7 @@ const InvoiceGenerator = () => {
                     generated_by: 'system',
                     total_amount: grandTotal,
                     mode_of_payment: paymentMode,
-                    gstin: gstin,
-                    gst_included: gstIncluded
+                    gstin: gstin
                 }])
                 .select()
                 .single();
@@ -459,7 +418,6 @@ const InvoiceGenerator = () => {
             const pdfComponent = (
                 <InvoicePDF
                     pageHead={isInvoice ? "Tax Invoice" : "Estimate"}
-                    gstIncluded={gstIncluded}
                     invoice={invoiceData}
                     customer={{
                         name: customerDetails.customerName,
@@ -495,7 +453,6 @@ const InvoiceGenerator = () => {
 
             setSavedInvoiceData({
                 invoice: invoiceData,
-                gstIncluded: gstIncluded,
                 customer: {
                     name: customerDetails.customerName,
                     phone_number: customerDetails.phoneNumber,
@@ -632,8 +589,6 @@ const InvoiceGenerator = () => {
                     />
 
                     <InvoiceSummary
-                        isInvoice={isInvoice}
-                        gstDistribution={calculateGSTDistribution()}
                         subtotal={subtotal}
                         totalGST={totalGST}
                         grandTotal={grandTotal}

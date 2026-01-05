@@ -2,20 +2,61 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Building2, Edit2, Save, X, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { useInvoiceCalculations } from '../hooks/useInvoiceCalculations';
 
 const InvoiceViewEdit = () => {
+    const [gstIncluded, setGstIncluded] = useState(false);
     const { id } = useParams();
     const { type } = useParams();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
-
     const [invoice, setInvoice] = useState(null);
     const [customer, setCustomer] = useState(null);
     const [products, setProducts] = useState([]);
+    const { calculateProductTotal, subtotal, totalGST, grandTotal } = useInvoiceCalculations(products, gstIncluded);
+
 
     const isInvoice = type === "invoice";
+
+    const calculateGSTDistribution = () => {
+        const distribution = {};
+
+        products.forEach(product => {
+            let baseAmount;
+            let gstAmount;
+
+            if (gstIncluded) {
+                const basePrice = product.rate / (1 + product.gstPercentage / 100);
+                baseAmount = product.quantity * basePrice;
+                gstAmount = (product.quantity * product.rate) - baseAmount;
+            } else {
+                baseAmount = product.quantity * product.rate;
+                gstAmount = (baseAmount * product.gstPercentage) / 100;
+            }
+
+            if (product.gstPercentage > 0) {
+                const gstKey = `${product.gstPercentage}%`;
+                if (!distribution[gstKey]) {
+                    distribution[gstKey] = {
+                        rate: product.gstPercentage,
+                        taxableAmount: 0,
+                        cgst: 0,
+                        sgst: 0,
+                        totalGst: 0
+                    };
+                }
+
+                distribution[gstKey].taxableAmount += baseAmount;
+                distribution[gstKey].cgst += gstAmount / 2;
+                distribution[gstKey].sgst += gstAmount / 2;
+                distribution[gstKey].totalGst += gstAmount;
+            }
+        });
+
+        return Object.values(distribution);
+    };
 
     // Store original data for cancel functionality
     const [originalData, setOriginalData] = useState({
@@ -42,6 +83,7 @@ const InvoiceViewEdit = () => {
 
             setInvoice(invoiceData);
             setCustomer(invoiceData.customer);
+            setGstIncluded(invoiceData.gst_included || false);
 
             // Fetch invoice items
             const { data: itemsData, error: itemsError } = await supabase
@@ -80,11 +122,6 @@ const InvoiceViewEdit = () => {
         }
     };
 
-    const calculateProductTotal = (quantity, rate, gstPercentage) => {
-        const baseAmount = quantity * rate;
-        const gstAmount = (baseAmount * gstPercentage) / 100;
-        return baseAmount + gstAmount;
-    };
 
     const handleProductChange = (productId, field, value) => {
         setProducts(prev => prev.map(product => {
@@ -92,11 +129,11 @@ const InvoiceViewEdit = () => {
                 const updated = { ...product, [field]: value };
 
                 if (['quantity', 'rate', 'gstPercentage'].includes(field)) {
-                    updated.totalAmount = calculateProductTotal(
-                        field === 'quantity' ? value : updated.quantity,
-                        field === 'rate' ? value : updated.rate,
-                        field === 'gstPercentage' ? value : updated.gstPercentage
-                    );
+                    const qty = field === 'quantity' ? value : updated.quantity;
+                    const rt = field === 'rate' ? value : updated.rate;
+                    const gst = field === 'gstPercentage' ? value : updated.gstPercentage;
+
+                    updated.totalAmount = calculateProductTotal(qty, rt, gst);
                 }
 
                 return updated;
@@ -128,38 +165,18 @@ const InvoiceViewEdit = () => {
         }
     };
 
-    const calculateSubtotal = () => {
-        return products.reduce((sum, product) => {
-            const base = product.quantity * product.rate;
-            return sum + base;
-        }, 0);
-    };
-
-    const calculateTotalGST = () => {
-        return products.reduce((sum, product) => {
-            const base = product.quantity * product.rate;
-            const gst = (base * product.gstPercentage) / 100;
-            return sum + gst;
-        }, 0);
-    };
-
-    const calculateGrandTotal = () => {
-        return products.reduce((sum, product) => sum + product.totalAmount, 0);
-    };
-
     const handleSave = async () => {
         setSaving(true);
 
         try {
-            const grandTotal = calculateGrandTotal();
-
             // Update invoice
             const { error: invoiceError } = await supabase
                 .from(isInvoice ? 'invoices' : 'estimate')
                 .update({
                     bill_date: invoice.bill_date,
                     mode_of_payment: invoice.mode_of_payment,
-                    total_amount: grandTotal
+                    total_amount: grandTotal,
+                    gst_included: gstIncluded
                 })
                 .eq('id', id);
 
@@ -508,29 +525,69 @@ const InvoiceViewEdit = () => {
                     {/* Total Section */}
                     <div className="p-6 bg-gray-50 border-t-2 border-gray-300">
                         <div className="space-y-6 flex flex-col items-end">
+
+
                             {/* Totals */}
                             <div className="space-y-2 w-full md:w-[50%]">
                                 <div className="flex justify-between items-center py-2 border-b border-gray-300">
                                     <span className="text-sm font-semibold text-gray-700">Subtotal:</span>
                                     <span className="text-base font-semibold text-gray-900">
-                                        ₹{calculateSubtotal().toFixed(2)}
+                                        ₹{subtotal.toFixed(2)}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                                    <span className="text-sm font-semibold text-gray-700">Total GST:</span>
-                                    <span className="text-base font-semibold text-gray-900">
-                                        ₹{calculateTotalGST().toFixed(2)}
-                                    </span>
-                                </div>
+
+                                {/* GST Distribution */}
+                                {calculateGSTDistribution().length > 0 && (
+                                    <div className="border-2 border-gray-200 rounded-lg p-3 bg-gray-50">
+                                        <h4 className="text-xs font-bold text-gray-700 mb-2 uppercase">GST Breakdown</h4>
+
+                                        {calculateGSTDistribution().map((gst, index) => (
+                                            <div key={index} className="mb-3 last:mb-0">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-xs font-semibold text-gray-600">
+                                                        GST @ {gst.rate}%
+                                                    </span>
+                                                    <span className="text-xs font-semibold text-blue-600">
+                                                        ₹{gst.totalGst.toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                                    <div className="bg-white rounded px-2 py-1">
+                                                        <div className="text-gray-500 text-[10px]">Taxable</div>
+                                                        <div className="font-medium text-gray-700">₹{gst.taxableAmount.toFixed(2)}</div>
+                                                    </div>
+                                                    <div className="bg-white rounded px-2 py-1">
+                                                        <div className="text-gray-500 text-[10px]">CGST</div>
+                                                        <div className="font-medium text-green-600">₹{gst.cgst.toFixed(2)}</div>
+                                                    </div>
+                                                    <div className="bg-white rounded px-2 py-1">
+                                                        <div className="text-gray-500 text-[10px]">SGST</div>
+                                                        <div className="font-medium text-green-600">₹{gst.sgst.toFixed(2)}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-300">
+                                            <span className="text-xs font-bold text-gray-700">Total GST:</span>
+                                            <span className="text-sm font-bold text-blue-600">₹{totalGST.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex justify-between items-center py-3 bg-gray-800 text-white px-4 rounded-lg">
                                     <span className="text-lg font-bold">GRAND TOTAL:</span>
                                     <span className="text-2xl font-bold">
-                                        ₹{calculateGrandTotal().toFixed(2)}
+                                        ₹{grandTotal.toFixed(2)}
                                     </span>
                                 </div>
                             </div>
 
-                            {/* Payment Mode */}
+                        </div>
+
+                        {/* Payment Mode */}
+                        {isInvoice && (
                             <div className="w-full md:w-[60%]">
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Mode</label>
                                 {isEditMode ? (
@@ -538,10 +595,10 @@ const InvoiceViewEdit = () => {
                                         value={invoice.mode_of_payment}
                                         onChange={(e) => setInvoice({ ...invoice, mode_of_payment: e.target.value })}
                                         className={`w-full px-4 py-2 border-2 rounded-lg focus:ring-2 font-medium transition-colors ${invoice.mode_of_payment === 'unpaid'
-                                            ? 'border-red-300 bg-red-50 text-red-700 focus:ring-red-500'
-                                            : invoice.mode_of_payment === 'cash'
-                                                ? 'border-green-300 bg-green-50 text-green-700 focus:ring-green-500'
-                                                : 'border-blue-300 bg-blue-50 text-blue-700 focus:ring-blue-500'
+                                                ? 'border-red-300 bg-red-50 text-red-700 focus:ring-red-500'
+                                                : invoice.mode_of_payment === 'cash'
+                                                    ? 'border-green-300 bg-green-50 text-green-700 focus:ring-green-500'
+                                                    : 'border-blue-300 bg-blue-50 text-blue-700 focus:ring-blue-500'
                                             }`}
                                     >
                                         <option value="unpaid">Unpaid</option>
@@ -551,20 +608,21 @@ const InvoiceViewEdit = () => {
                                 ) : (
                                     <div className="w-full px-4 py-2 bg-white border-2 border-gray-200 rounded-lg">
                                         <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
-                                            ? 'bg-green-100 text-green-800'
-                                            : 'bg-yellow-100 text-yellow-800'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-yellow-100 text-yellow-800'
                                             }`}>
                                             {invoice.mode_of_payment.toUpperCase()}
                                         </span>
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
         </div>
-    );
+            
+                );
 };
 
 export default InvoiceViewEdit;

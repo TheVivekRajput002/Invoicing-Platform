@@ -2,9 +2,11 @@ import React from 'react';
 import { Save } from 'lucide-react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import InvoicePDF from '../InvoicePDF';
-import { sendInvoiceToWhatsApp } from '../../utils/sendWhatsApp'; 
+import { sendInvoiceToWhatsApp } from '../../utils/sendWhatsApp';
 
 const InvoiceSummary = ({
+    isInvoice,
+    gstDistribution,
     subtotal,
     totalGST,
     grandTotal,
@@ -14,7 +16,8 @@ const InvoiceSummary = ({
     saving,
     canSave,
     invoiceSaved,
-    savedInvoiceData
+    savedInvoiceData,
+    gstIncluded
 }) => {
     return (
         <>
@@ -22,39 +25,81 @@ const InvoiceSummary = ({
             <div className="p-6 bg-gray-50 border-t-2 border-gray-300">
                 <div className="space-y-6 flex flex-col items-end">
                     {/* Totals */}
-                    <div className="space-y-2 w-[50%]">
+                    <div className="space-y-2 w-full md:w-[70%]">
+                        {/* Subtotal */}
                         <div className="flex justify-between items-center py-2 border-b border-gray-300">
                             <span className="text-sm font-semibold text-gray-700">Subtotal:</span>
                             <span className="text-base font-semibold text-gray-900">₹{subtotal.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                            <span className="text-sm font-semibold text-gray-700">Total GST:</span>
-                            <span className="text-base font-semibold text-gray-900">₹{totalGST.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-3 bg-gray-800 text-white px-4 rounded-lg">
+
+                        {/* GST Distribution */}
+                        {gstDistribution && gstDistribution.length > 0 && (
+                            <div className="border-2 border-gray-200 rounded-lg p-3 bg-gray-50">
+                                <h4 className="text-xs font-bold text-gray-700 mb-2 uppercase">GST Breakdown</h4>
+
+                                {gstDistribution.map((gst, index) => (
+                                    <div key={index} className="mb-3 last:mb-0">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs font-semibold text-gray-600">
+                                                GST @ {gst.rate}%
+                                            </span>
+                                            <span className="text-xs font-semibold text-blue-600">
+                                                ₹{gst.totalGst.toFixed(2)}
+                                            </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-2 text-xs">
+                                            <div className="bg-white rounded px-2 py-1">
+                                                <div className="text-gray-500 text-[10px]">Taxable</div>
+                                                <div className="font-medium text-gray-700">₹{gst.taxableAmount.toFixed(2)}</div>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1">
+                                                <div className="text-gray-500 text-[10px]">CGST</div>
+                                                <div className="font-medium text-green-600">₹{gst.cgst.toFixed(2)}</div>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1">
+                                                <div className="text-gray-500 text-[10px]">SGST</div>
+                                                <div className="font-medium text-green-600">₹{gst.sgst.toFixed(2)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Total GST Summary */}
+                                <div className="flex justify-between items-center pt-2 mt-2 border-t border-gray-300">
+                                    <span className="text-xs font-bold text-gray-700">Total GST:</span>
+                                    <span className="text-sm font-bold text-blue-600">₹{totalGST.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Grand Total */}
+                        <div className="flex justify-between items-center py-3 bg-gray-800 text-white px-4 rounded-lg mt-2">
                             <span className="text-lg font-bold">GRAND TOTAL:</span>
                             <span className="text-2xl font-bold">₹{grandTotal.toFixed(2)}</span>
                         </div>
                     </div>
 
                     {/* Payment Mode */}
-                    <div className="w-[60%]">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Mode</label>
-                        <select
-                            value={paymentMode}
-                            onChange={(e) => onPaymentModeChange(e.target.value)}
-                            className={`w-full px-4 py-2 border-2 rounded-lg focus:ring-2 font-medium transition-colors ${paymentMode === 'unpaid'
+                    {isInvoice ? (
+                        <div className="w-[70%]">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Mode</label>
+                            <select
+                                value={paymentMode}
+                                onChange={(e) => onPaymentModeChange(e.target.value)}
+                                className={`w-full px-4 py-2 border-2 rounded-lg focus:ring-2 font-medium transition-colors ${paymentMode === 'unpaid'
                                     ? 'border-red-300 bg-red-50 text-red-700 focus:ring-red-500'
                                     : paymentMode === 'cash'
                                         ? 'border-green-300 bg-green-50 text-green-700 focus:ring-green-500'
                                         : 'border-blue-300 bg-blue-50 text-blue-700 focus:ring-blue-500'
-                                }`}
-                        >
-                            <option value="unpaid">Unpaid</option>
-                            <option value="cash">Cash</option>
-                            <option value="online">Online</option>
-                        </select>
-                    </div>
+                                    }`}
+                            >
+                                <option value="unpaid">Unpaid</option>
+                                <option value="cash">Cash</option>
+                                <option value="online">Online</option>
+                            </select>
+                        </div>
+                    ) : ""}
                 </div>
             </div>
 
@@ -75,9 +120,12 @@ const InvoiceSummary = ({
                             <PDFDownloadLink
                                 document={
                                     <InvoicePDF
+                                        isInvoice={isInvoice}
+                                        pageHead={isInvoice ? "Tax Invoice" : "Estimate"}
                                         invoice={savedInvoiceData.invoice}
                                         customer={savedInvoiceData.customer}
                                         products={savedInvoiceData.products}
+                                        gstIncluded={savedInvoiceData.gstIncluded}
                                     />
                                 }
                                 fileName={`Invoice-${savedInvoiceData.invoice.invoice_number}.pdf`}

@@ -324,27 +324,155 @@ const styles = StyleSheet.create({
         fontFamily: 'Helvetica',
         color: '#111827',
     },
+    // Add these new styles in your StyleSheet.create()
+    gstBreakdownBox: {
+        borderWidth: 2,
+        borderColor: '#e5e7eb',
+        borderRadius: 4,
+        padding: 8,
+        backgroundColor: '#f9fafb',
+        marginBottom: 8,
+    },
+    gstBreakdownTitle: {
+        fontSize: 8,
+        fontFamily: 'Helvetica-Bold',
+        color: '#374151',
+        marginBottom: 6,
+        textTransform: 'uppercase',
+    },
+    gstBreakdownItem: {
+        marginBottom: 8,
+    },
+    gstBreakdownHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
+    gstRateLabel: {
+        fontSize: 8,
+        fontFamily: 'Helvetica-Bold',
+        color: '#4b5563',
+    },
+    gstTotalAmount: {
+        fontSize: 8,
+        fontFamily: 'Helvetica-Bold',
+        color: '#2563eb',
+    },
+    gstDetailsGrid: {
+        flexDirection: 'row',
+        gap: 4,
+    },
+    gstDetailBox: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+        borderRadius: 3,
+        padding: 4,
+    },
+    gstDetailLabel: {
+        fontSize: 7,
+        color: '#6b7280',
+    },
+    gstDetailValue: {
+        fontSize: 8,
+        fontFamily: 'Helvetica-Bold',
+        color: '#374151',
+    },
+    gstSummaryRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingTop: 6,
+        marginTop: 6,
+        borderTop: 1,
+        borderColor: '#d1d5db',
+    },
+    gstSummaryLabel: {
+        fontSize: 8,
+        fontFamily: 'Helvetica-Bold',
+        color: '#374151',
+    },
+    gstSummaryValue: {
+        fontSize: 9,
+        fontFamily: 'Helvetica-Bold',
+        color: '#2563eb',
+    },
 });
 
-const InvoicePDF = ({pageHead, invoice, customer, products }) => {
-    // Calculate totals
+const InvoicePDF = ({ isInvoice, pageHead, invoice, customer, products, gstIncluded }) => {
+
+
+    // Calculate totals with gstIncluded logic
     const calculateSubtotal = () => {
         return products.reduce((sum, product) => {
-            const base = product.quantity * product.rate;
-            return sum + base;
+            if (gstIncluded) {
+                // When GST is included, subtotal is base price (rate without GST)
+                const basePrice = product.rate / (1 + product.gstPercentage / 100);
+                return sum + (product.quantity * basePrice);
+            } else {
+                // When GST is not included, subtotal is just quantity × rate
+                return sum + (product.quantity * product.rate);
+            }
         }, 0);
     };
 
     const calculateTotalGST = () => {
         return products.reduce((sum, product) => {
-            const base = product.quantity * product.rate;
-            const gst = (base * product.gstPercentage) / 100;
-            return sum + gst;
+            if (gstIncluded) {
+                // When GST is included, extract GST from the rate
+                const basePrice = product.rate / (1 + product.gstPercentage / 100);
+                const gstAmount = product.rate - basePrice;
+                return sum + (product.quantity * gstAmount);
+            } else {
+                // When GST is not included, calculate GST on base amount
+                const base = product.quantity * product.rate;
+                const gst = (base * product.gstPercentage) / 100;
+                return sum + gst;
+            }
         }, 0);
     };
 
     const calculateGrandTotal = () => {
-        return products.reduce((sum, product) => sum + product.totalAmount, 0);
+        // Grand total is always subtotal + totalGST
+        return calculateSubtotal() + calculateTotalGST();
+    };
+
+    const calculateGSTDistribution = () => {
+        const distribution = {};
+
+        products.forEach(product => {
+            let baseAmount;
+            let gstAmount;
+
+            if (gstIncluded) {
+                // When GST is included in rate
+                const basePrice = product.rate / (1 + product.gstPercentage / 100);
+                baseAmount = product.quantity * basePrice;
+                gstAmount = (product.quantity * product.rate) - baseAmount;
+            } else {
+                // When GST is not included
+                baseAmount = product.quantity * product.rate;
+                gstAmount = (baseAmount * product.gstPercentage) / 100;
+            }
+
+            if (product.gstPercentage > 0) {
+                const gstKey = `${product.gstPercentage}%`;
+                if (!distribution[gstKey]) {
+                    distribution[gstKey] = {
+                        rate: product.gstPercentage,
+                        taxableAmount: 0,
+                        cgst: 0,
+                        sgst: 0,
+                        totalGst: 0
+                    };
+                }
+
+                distribution[gstKey].taxableAmount += baseAmount;
+                distribution[gstKey].cgst += gstAmount / 2;
+                distribution[gstKey].sgst += gstAmount / 2;
+                distribution[gstKey].totalGst += gstAmount;
+            }
+        });
+
+        return Object.values(distribution);
     };
 
     const formatDate = (dateString) => {
@@ -400,7 +528,7 @@ const InvoicePDF = ({pageHead, invoice, customer, products }) => {
                                     </Text>
                                 </View>
                             )}
-                            
+
                         </View>
                     </View>
                 </View>
@@ -490,16 +618,51 @@ const InvoicePDF = ({pageHead, invoice, customer, products }) => {
 
                         {/* Right side - Totals and Payment */}
                         <View style={styles.totalsContainer}>
+
                             {/* Totals */}
                             <View style={styles.totalsBox}>
                                 <View style={styles.totalRow}>
                                     <Text style={styles.totalLabel}>Subtotal:</Text>
                                     <Text style={styles.totalValue}>₹{calculateSubtotal().toFixed(2)}</Text>
                                 </View>
-                                <View style={styles.totalRow}>
-                                    <Text style={styles.totalLabel}>Total GST:</Text>
-                                    <Text style={styles.totalValue}>₹{calculateTotalGST().toFixed(2)}</Text>
-                                </View>
+
+                                {/* 🆕 GST BREAKDOWN - ADD THIS */}
+                                {calculateGSTDistribution().length > 0 && (
+                                    <View style={styles.gstBreakdownBox}>
+                                        <Text style={styles.gstBreakdownTitle}>GST Breakdown</Text>
+
+                                        {calculateGSTDistribution().map((gst, index) => (
+                                            <View key={index} style={styles.gstBreakdownItem}>
+                                                <View style={styles.gstBreakdownHeader}>
+                                                    <Text style={styles.gstRateLabel}>GST @ {gst.rate}%</Text>
+                                                    <Text style={styles.gstTotalAmount}>₹{gst.totalGst.toFixed(2)}</Text>
+                                                </View>
+
+                                                <View style={styles.gstDetailsGrid}>
+                                                    <View style={styles.gstDetailBox}>
+                                                        <Text style={styles.gstDetailLabel}>Taxable</Text>
+                                                        <Text style={styles.gstDetailValue}>₹{gst.taxableAmount.toFixed(2)}</Text>
+                                                    </View>
+                                                    <View style={styles.gstDetailBox}>
+                                                        <Text style={styles.gstDetailLabel}>CGST</Text>
+                                                        <Text style={styles.gstDetailValue}>₹{gst.cgst.toFixed(2)}</Text>
+                                                    </View>
+                                                    <View style={styles.gstDetailBox}>
+                                                        <Text style={styles.gstDetailLabel}>SGST</Text>
+                                                        <Text style={styles.gstDetailValue}>₹{gst.sgst.toFixed(2)}</Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        ))}
+
+                                        <View style={styles.gstSummaryRow}>
+                                            <Text style={styles.gstSummaryLabel}>Total GST:</Text>
+                                            <Text style={styles.gstSummaryValue}>₹{calculateTotalGST().toFixed(2)}</Text>
+                                        </View>
+                                    </View>
+                                )}
+                                {/* 🆕 END GST BREAKDOWN */}
+
                                 <View style={styles.grandTotalRow}>
                                     <Text style={styles.grandTotalLabel}>GRAND TOTAL:</Text>
                                     <Text style={styles.grandTotalValue}>₹{calculateGrandTotal().toFixed(2)}</Text>
@@ -507,21 +670,24 @@ const InvoicePDF = ({pageHead, invoice, customer, products }) => {
                             </View>
 
                             {/* Payment Mode below totals */}
-                            <View style={styles.paymentModeBelow}>
-                                <Text style={styles.fieldLabel}>Payment Mode</Text>
-                                <View style={styles.paymentBadge}>
-                                    <View
-                                        style={[
-                                            styles.paymentBadgeInner,
-                                            invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
-                                                ? styles.paymentPaid
-                                                : styles.paymentUnpaid,
-                                        ]}
-                                    >
-                                        <Text>{invoice.mode_of_payment.toUpperCase()}</Text>
+                            {isInvoice ? (
+                                <View style={styles.paymentModeBelow}>
+                                    <Text style={styles.fieldLabel}>Payment Mode</Text>
+                                    <View style={styles.paymentBadge}>
+                                        <View
+                                            style={[
+                                                styles.paymentBadgeInner,
+                                                invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
+                                                    ? styles.paymentPaid
+                                                    : styles.paymentUnpaid,
+                                            ]}
+                                        >
+                                            <Text>{invoice.mode_of_payment.toUpperCase()}</Text>
+                                        </View>
                                     </View>
                                 </View>
-                            </View>
+                            ) : ""}
+
                         </View>
                     </View>
                 </View>

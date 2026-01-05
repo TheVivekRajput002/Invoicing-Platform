@@ -218,9 +218,7 @@ const ProductRow = ({
                     value={product.gstPercentage}
                     onChange={(e) => onProductChange(product.id, 'gstPercentage', parseFloat(e.target.value))}
                     onKeyDown={(e) => onKeyDown(e, `${product.id}-gstPercentage`, product.id)}
-                    disabled={gstIncluded}
-                    className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center ${gstIncluded ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
-                        }`}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm text-center `}
                 >
                     <option value={0}>0%</option>
                     <option value={5}>5%</option>
