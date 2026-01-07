@@ -168,16 +168,6 @@ const ProductRow = ({
                         </div>
                     )}
 
-                    {/* ✅ NEW: Add badge for newly added products */}
-                    {newlyAdded && !productsFromDB.has(product.id) && (
-                        <div className="absolute right-3 top-3 flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                            </svg>
-                            New
-                        </div>
-                    )}
-
                 </div>
             </td>
 

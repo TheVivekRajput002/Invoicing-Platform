@@ -1,7 +1,7 @@
 export const sendInvoiceToWhatsApp = (phoneNumber, pdfUrl, invoiceNumber, amount) => {
   const cleanPhone = phoneNumber.replace(/\D/g, '');
   
-  const message = `Your invoice is ready:
+  const message = `
 Invoice No: ${invoiceNumber}
 Amount: ₹${amount}
 

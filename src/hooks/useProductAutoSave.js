@@ -70,7 +70,7 @@ export const useProductAutoSave = (products, productsFromDB, onProductSaved) => 
                 } catch (error) {
                     console.error('❌ Error auto-saving product:', error);
                 }
-            }, 3000);
+            }, 4000);
         });
 
         return () => {

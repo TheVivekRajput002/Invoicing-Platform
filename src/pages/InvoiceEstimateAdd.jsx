@@ -20,13 +20,18 @@ import InvoicePDF from '../components/InvoicePDF'; // Your existing PDF componen
 
 import { ToastContainer } from '../components/invoice/Toast';
 
-const InvoiceGenerator = () => {
+// photos 
+import { uploadPhoto } from '../utils/uploadPhoto';
+import PhotoCapture from '../components/invoice/PhotoCapture';
+
+const InvoiceEstimateAdd = () => {
 
     const { type } = useParams();
     const isInvoice = type === 'invoice';
 
     const navigate = useNavigate();
     const inputRefs = useRef({});
+    const [photos, setPhotos] = useState([]);
 
     // Date states
     const [invoiceDate, setInvoiceDate] = useState('');
@@ -42,21 +47,49 @@ const InvoiceGenerator = () => {
     const [toasts, setToasts] = useState([]);
     const [newlyAddedProducts, setNewlyAddedProducts] = useState(new Set());
 
-// In InvoiceGenerator component, update the addToast function:
-const addToast = (productDetails) => {
-    console.log('📢 addToast called with:', productDetails);
-    const newToast = {
-        id: Date.now(),
-        productDetails: productDetails
+    const handlePhotoCapture = async (file) => {
+        try {
+            const photoUrl = await uploadPhoto(file, isInvoice ? savedInvoiceData.invoice.invoice_number : savedInvoiceData.invoice.estimate_number);
+
+            // Save to database immediately
+            const { error } = await supabase
+                .from('invoice_photos')
+                .insert([{
+                    ...(isInvoice
+                        ? { invoice_id: savedInvoiceData.invoice.id }
+                        : { estimate_id: savedInvoiceData.invoice.id }),
+                    photo_url: photoUrl
+                }]);
+
+            if (error) throw error;
+
+            setPhotos(prev => [...prev, photoUrl]);
+            alert('Photo uploaded successfully!');
+        } catch (error) {
+            console.error('Error uploading photo:', error);
+            alert('Failed to upload photo: ' + error.message);
+        }
     };
-    console.log('📦 Creating toast:', newToast);
-    setToasts(prev => {
-        console.log('Previous toasts:', prev);
-        const updated = [...prev, newToast];
-        console.log('Updated toasts:', updated);
-        return updated;
-    });
-};
+
+    const handleRemovePhoto = (index) => {
+        setPhotos(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // In InvoiceGenerator component, update the addToast function:
+    const addToast = (productDetails) => {
+        console.log('📢 addToast called with:', productDetails);
+        const newToast = {
+            id: Date.now(),
+            productDetails: productDetails
+        };
+        console.log('📦 Creating toast:', newToast);
+        setToasts(prev => {
+            console.log('Previous toasts:', prev);
+            const updated = [...prev, newToast];
+            console.log('Updated toasts:', updated);
+            return updated;
+        });
+    };
 
     // In InvoiceGenerator, add this useEffect after the addToast function:
     useEffect(() => {
@@ -238,6 +271,25 @@ const addToast = (productDetails) => {
             )
         })));
     }, [gstIncluded]);
+
+    useEffect(() => {
+        // Reset saved invoice state when user starts filling new details
+        if (invoiceSaved && savedInvoiceData) {
+            const hasStartedNewInvoice =
+                customerDetails.customerName !== '' ||
+                customerDetails.phoneNumber !== '' ||
+                customerDetails.customerAddress !== '' ||
+                customerDetails.vehicle !== '' ||
+                gstin !== '' ||
+                photos.length > 0 ||
+                products.some(p => p.productName !== '' || p.quantity !== '' || p.rate !== '');
+
+            if (hasStartedNewInvoice) {
+                setInvoiceSaved(false);
+                setSavedInvoiceData(null);
+            }
+        }
+    }, [customerDetails, products, gstin, photos, invoiceSaved, savedInvoiceData]);
 
     // Product search
     useEffect(() => {
@@ -531,6 +583,24 @@ const addToast = (productDetails) => {
                 alert('Invoice saved but PDF generation failed: ' + pdfError.message);
             }
 
+            if (photos.length > 0) {
+                const photoRecords = photos.map(photoUrl => ({
+                    ...(isInvoice
+                        ? { invoice_id: invoiceData.id }
+                        : { estimate_id: invoiceData.id }),
+                    photo_url: photoUrl
+                }));
+
+                const { error: photosError } = await supabase
+                    .from('invoice_photos')
+                    .insert(photoRecords);
+
+                if (photosError) {
+                    console.error('Error saving photos:', photosError);
+                }
+            }
+
+
             setSavedInvoiceData({
                 invoice: invoiceData,
                 gstIncluded: gstIncluded,
@@ -553,12 +623,7 @@ const addToast = (productDetails) => {
             setProducts([{ id: 1, serialNumber: 1, productName: '', hsnCode: '', quantity: '', rate: '', gstPercentage: 0, totalAmount: 0 }]);
             setPaymentMode('unpaid');
             setGstin('');
-
-            // ✅ Reset invoice saved flag after a delay
-            setTimeout(() => {
-                setInvoiceSaved(false);
-                setSavedInvoiceData(null);
-            }, 3000);
+            setPhotos([]);
 
             // ✅ Fetch updated invoice number preview
             // ✅ Fetch updated invoice number preview
@@ -579,12 +644,16 @@ const addToast = (productDetails) => {
                 }
             }  // ✅ ADD THIS CLOSING BRACE
 
+
+
         } catch (error) {
             console.error('Error saving invoice:', error);
             alert('Error saving invoice: ' + error.message);
         } finally {
             setSaving(false);
         }
+
+
     };
 
     // Keyboard navigation
@@ -685,6 +754,9 @@ const addToast = (productDetails) => {
                         canSave={canSave}
                         invoiceSaved={invoiceSaved}
                         savedInvoiceData={savedInvoiceData}
+                        onPhotoCapture={handlePhotoCapture}
+                        photos={photos}
+                        onRemovePhoto={handleRemovePhoto}
                     />
                 </div>
             </div>
@@ -694,4 +766,4 @@ const addToast = (productDetails) => {
     );
 };
 
-export default InvoiceGenerator;
+export default InvoiceEstimateAdd;

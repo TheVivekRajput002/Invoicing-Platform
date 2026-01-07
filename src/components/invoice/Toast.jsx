@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { CheckCircle, X } from 'lucide-react';
 
-const Toast = ({ message, productDetails, onClose, duration = 5000 }) => {
+const Toast = ({ message, productDetails, onClose, duration = 7000 }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
@@ -24,7 +24,7 @@ const Toast = ({ message, productDetails, onClose, duration = 5000 }) => {
             <div className="flex gap-3 mt-1 text-xs">
               <span className="text-green-600">Rate: ₹{productDetails.rate}</span>
               {productDetails.hsn && <span className="text-blue-600">HSN: {productDetails.hsn}</span>}
-              <span className="text-purple-600">GST: {productDetails.gst}%</span>
+              {/* <span className="text-purple-600">GST: {productDetails.gst}%</span> */}
             </div>
           </div>
         </div>
