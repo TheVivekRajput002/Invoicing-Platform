@@ -48,8 +48,21 @@ const InvoiceEstimateAdd = () => {
     const [newlyAddedProducts, setNewlyAddedProducts] = useState(new Set());
 
     const handlePhotoCapture = async (file) => {
+        const uploadId = Date.now();
+
         try {
-            const photoUrl = await uploadPhoto(file, isInvoice ? savedInvoiceData.invoice.invoice_number : savedInvoiceData.invoice.estimate_number);
+            // Add uploading placeholder with progress
+            setPhotos(prev => [...prev, {
+                id: uploadId,
+                url: null,
+                uploading: true,
+                name: file.name
+            }]);
+
+            const photoUrl = await uploadPhoto(
+                file,
+                isInvoice ? savedInvoiceData.invoice.invoice_number : savedInvoiceData.invoice.estimate_number
+            );
 
             // Save to database immediately
             const { error } = await supabase
@@ -63,17 +76,35 @@ const InvoiceEstimateAdd = () => {
 
             if (error) throw error;
 
-            setPhotos(prev => [...prev, photoUrl]);
+            // Replace placeholder with actual URL
+            setPhotos(prev => prev.map(p =>
+                p.id === uploadId
+                    ? { id: uploadId, url: photoUrl, uploading: false }
+                    : p
+            ));
+
             alert('Photo uploaded successfully!');
         } catch (error) {
             console.error('Error uploading photo:', error);
             alert('Failed to upload photo: ' + error.message);
+            // Remove failed placeholder
+            setPhotos(prev => prev.filter(p => p.id !== uploadId));
         }
     };
 
-    const handleRemovePhoto = (index) => {
+    const handleRemovePhoto = async (index) => {
+        const photoToRemove = photos[index];
+
+        // Don't allow removing while uploading
+        if (photoToRemove.uploading) {
+            alert('Please wait for upload to complete');
+            return;
+        }
+
         setPhotos(prev => prev.filter((_, i) => i !== index));
     };
+
+
 
     // In InvoiceGenerator component, update the addToast function:
     const addToast = (productDetails) => {
@@ -281,7 +312,7 @@ const InvoiceEstimateAdd = () => {
                 customerDetails.customerAddress !== '' ||
                 customerDetails.vehicle !== '' ||
                 gstin !== '' ||
-                photos.length > 0 ||
+                photos.filter(p => !p.uploading).length > 0 ||
                 products.some(p => p.productName !== '' || p.quantity !== '' || p.rate !== '');
 
             if (hasStartedNewInvoice) {
