@@ -5,7 +5,7 @@ import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/render
 const styles = StyleSheet.create({
     page: {
         padding: 15,
-        fontSize: 10,
+        fontSize: 15,
         fontFamily: 'Helvetica',
     },
     // Header Section
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     logoText: {
-        fontSize: 24,
+        fontSize: 29,
         color: '#1f2937',
         fontFamily: 'Helvetica-Bold',
     },
@@ -44,13 +44,13 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     companyName: {
-        fontSize: 16,
+        fontSize: 21,
         fontFamily: 'Helvetica-Bold',
         color: '#1f2937',
         marginBottom: 4,
     },
     companyAddress: {
-        fontSize: 9,
+        fontSize: 14,
         color: '#4b5563',
         marginBottom: 2,
     },
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f9fafb',
     },
     invoiceTitle: {
-        fontSize: 14,
+        fontSize: 19,
         fontFamily: 'Helvetica-Bold',
         color: '#1f2937',
         marginBottom: 10,
@@ -73,12 +73,12 @@ const styles = StyleSheet.create({
         marginBottom: 5,
     },
     invoiceLabel: {
-        fontSize: 9,
+        fontSize: 14,
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
     },
     invoiceValue: {
-        fontSize: 9,
+        fontSize: 14,
         color: '#111827',
     },
     // Customer Section
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
         borderColor: '#d1d5db',
     },
     sectionTitle: {
-        fontSize: 12,
+        fontSize: 17,
         fontFamily: 'Helvetica-Bold',
         color: '#1f2937',
         marginBottom: 10,
@@ -108,14 +108,14 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     fieldLabel: {
-        fontSize: 8,
+        fontSize: 13,
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
         marginBottom: 3,
         width: '50%'
     },
     fieldValue: {
-        fontSize: 9,
+        fontSize: 14,
         color: '#111827',
         padding: 6,
         backgroundColor: '#ffffff',
@@ -138,14 +138,14 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         padding: 8,
         fontFamily: 'Helvetica-Bold',
-        fontSize: 9,
+        fontSize: 14,
     },
     tableRow: {
         flexDirection: 'row',
         borderBottom: 1,
         borderColor: '#d1d5db',
         padding: 8,
-        fontSize: 9,
+        fontSize: 14,
     },
     col1: { width: '5%', textAlign: 'center' },
     col2: { width: '30%' },
@@ -178,12 +178,12 @@ const styles = StyleSheet.create({
         borderColor: '#d1d5db',
     },
     totalLabel: {
-        fontSize: 9,
+        fontSize: 14,
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
     },
     totalValue: {
-        fontSize: 9,
+        fontSize: 14,
         fontFamily: 'Helvetica-Bold',
         color: '#111827',
     },
@@ -197,11 +197,11 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
     grandTotalLabel: {
-        fontSize: 9,
+        fontSize: 14,
         fontFamily: 'Helvetica-Bold',
     },
     grandTotalValue: {
-        fontSize: 11,
+        fontSize: 14,
         fontFamily: 'Helvetica-Bold',
     },
     paymentBadge: {
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     paymentBadgeInner: {
         padding: 3,
         borderRadius: 10,
-        fontSize: 8,
+        fontSize: 13,
         fontFamily: 'Helvetica-Bold',
         textAlign: 'center',
     },
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
         width: '45%',
     },
     signatureLabel: {
-        fontSize: 9,
+        fontSize: 14,
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
         marginBottom: 20,
@@ -253,14 +253,14 @@ const styles = StyleSheet.create({
         paddingTop: 5,
     },
     signatureText: {
-        fontSize: 8,
+        fontSize: 13,
         color: '#6b7280',
         textAlign: 'center',
     },
     footerNote: {
         marginTop: 8,
         textAlign: 'center',
-        fontSize: 7,
+        fontSize: 12,
         color: '#9ca3af',
         fontStyle: 'italic',
     },
@@ -285,13 +285,13 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     termsTitle: {
-        fontSize: 10,
+        fontSize: 15,
         fontFamily: 'Helvetica-Bold',
         color: '#1f2937',
         marginBottom: 8,
     },
     termItem: {
-        fontSize: 8,
+        fontSize: 13,
         color: '#4b5563',
         marginBottom: 2,
         paddingLeft: 10,
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
         paddingLeft: 5,
     },
     customerTextLine: {
-        fontSize: 10,
+        fontSize: 15,
         marginBottom: 4,
         color: '#111827',
     },
@@ -338,12 +338,12 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     gstRateLabel: {
-        fontSize: 8,
+        fontSize: 13,
         fontFamily: 'Helvetica-Bold',
         color: '#4b5563',
     },
     gstTotalAmount: {
-        fontSize: 8,
+        fontSize: 13,
         fontFamily: 'Helvetica-Bold',
         color: '#2563eb',
     },
@@ -358,11 +358,11 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     gstDetailLabel: {
-        fontSize: 7,
+        fontSize: 12,
         color: '#6b7280',
     },
     gstDetailValue: {
-        fontSize: 8,
+        fontSize: 13,
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
     },
@@ -375,12 +375,12 @@ const styles = StyleSheet.create({
         borderColor: '#d1d5db',
     },
     gstSummaryLabel: {
-        fontSize: 8,
+        fontSize: 13,
         fontFamily: 'Helvetica-Bold',
         color: '#374151',
     },
     gstSummaryValue: {
-        fontSize: 9,
+        fontSize: 14,
         fontFamily: 'Helvetica-Bold',
         color: '#2563eb',
     },
