@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient';
 import { Building2, Edit2, Save, X, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { useInvoiceCalculations } from '../hooks/useInvoiceCalculations';
 
+
 const InvoiceViewEdit = () => {
     const [gstIncluded, setGstIncluded] = useState(false);
     const { id } = useParams();
@@ -16,6 +17,10 @@ const InvoiceViewEdit = () => {
     const [customer, setCustomer] = useState(null);
     const [products, setProducts] = useState([]);
     const { calculateProductTotal, subtotal, totalGST, grandTotal } = useInvoiceCalculations(products, gstIncluded);
+
+    const [photo, setPhoto] = useState(null); // Store photo URL
+    const [photoId, setPhotoId] = useState(null); // Store photo record ID
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
 
     const isInvoice = type === "invoice";
@@ -81,6 +86,24 @@ const InvoiceViewEdit = () => {
 
             if (invoiceError) throw invoiceError;
 
+            const { data: photoData, error: photoError } = await supabase
+                .from('invoice_photos')
+                .select('*')
+                .eq(isInvoice ? 'invoice_id' : 'estimate_id', id)
+                .maybeSingle();
+
+            console.log('🔍 Photo fetch result:', { photoData, photoError, isInvoice, id });
+
+            const photoUrl = photoData?.photo_url || null;
+
+            console.log('📸 Photo URL set to:', photoUrl);
+
+            setPhoto(photoUrl);
+            setPhotoId(photoData?.id || null);
+
+            console.log('✅ Photo state updated:', { photo: photoUrl, photoId: photoData?.id });
+
+
             setInvoice(invoiceData);
             setCustomer(invoiceData.customer);
             setGstIncluded(invoiceData.gst_included || false);
@@ -120,6 +143,88 @@ const InvoiceViewEdit = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePhotoUpload = async (file) => {
+        setUploadingPhoto(true);
+        try {
+            // Generate unique filename
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${isInvoice ? 'invoice' : 'estimate'}_${id}_${Date.now()}.${fileExt}`;
+
+            // Upload to Supabase Storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('invoice-photos')
+                .upload(fileName, file);
+
+            if (uploadError) throw uploadError;
+
+            // If photo already exists, delete old one from storage and DB
+            if (photo && photoId) {
+                await handlePhotoDelete();
+            }
+
+            // Insert new photo record
+            const { data: photoRecord, error: insertError } = await supabase
+                .from('invoice_photos')
+                .insert({
+                    [isInvoice ? 'invoice_id' : 'estimate_id']: id,
+                    photo_url: fileName  
+                })
+                .select()
+                .single();
+
+            if (insertError) throw insertError;
+
+            setPhoto(fileName); 
+            setPhotoId(photoRecord.id);
+            alert('Photo uploaded successfully!');
+
+        } catch (error) {
+            console.error('Error uploading photo:', error);
+            alert('Error uploading photo: ' + error.message);
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
+    const handlePhotoDelete = async () => {
+        if (!photo || !photoId) return;
+
+        try {
+            // Delete from storage
+            const { error: storageError } = await supabase.storage
+                .from('invoice-photos')
+                .remove([photo]);
+
+            if (storageError) throw storageError;
+
+            // Delete from database
+            const { error: dbError } = await supabase
+                .from('invoice_photos')
+                .delete()
+                .eq('id', photoId);
+
+            if (dbError) throw dbError;
+
+            setPhoto(null);
+            setPhotoId(null);
+            alert('Photo deleted successfully!');
+
+        } catch (error) {
+            console.error('Error deleting photo:', error);
+            alert('Error deleting photo: ' + error.message);
+        }
+    };
+
+    const getPhotoUrl = (path) => {
+        console.log('🔗 Getting photo URL for path:', path);
+        if (!path) return null;
+        const { data } = supabase.storage
+            .from('invoice-photos')
+            .getPublicUrl(path);
+        console.log('🔗 Generated public URL:', data.publicUrl);
+        return data.publicUrl;
     };
 
 
@@ -595,10 +700,10 @@ const InvoiceViewEdit = () => {
                                         value={invoice.mode_of_payment}
                                         onChange={(e) => setInvoice({ ...invoice, mode_of_payment: e.target.value })}
                                         className={`w-full px-4 py-2 border-2 rounded-lg focus:ring-2 font-medium transition-colors ${invoice.mode_of_payment === 'unpaid'
-                                                ? 'border-red-300 bg-red-50 text-red-700 focus:ring-red-500'
-                                                : invoice.mode_of_payment === 'cash'
-                                                    ? 'border-green-300 bg-green-50 text-green-700 focus:ring-green-500'
-                                                    : 'border-blue-300 bg-blue-50 text-blue-700 focus:ring-blue-500'
+                                            ? 'border-red-300 bg-red-50 text-red-700 focus:ring-red-500'
+                                            : invoice.mode_of_payment === 'cash'
+                                                ? 'border-green-300 bg-green-50 text-green-700 focus:ring-green-500'
+                                                : 'border-blue-300 bg-blue-50 text-blue-700 focus:ring-blue-500'
                                             }`}
                                     >
                                         <option value="unpaid">Unpaid</option>
@@ -608,8 +713,8 @@ const InvoiceViewEdit = () => {
                                 ) : (
                                     <div className="w-full px-4 py-2 bg-white border-2 border-gray-200 rounded-lg">
                                         <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${invoice.mode_of_payment === 'cash' || invoice.mode_of_payment === 'online'
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-yellow-100 text-yellow-800'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-yellow-100 text-yellow-800'
                                             }`}>
                                             {invoice.mode_of_payment.toUpperCase()}
                                         </span>
@@ -617,12 +722,81 @@ const InvoiceViewEdit = () => {
                                 )}
                             </div>
                         )}
+
                     </div>
+
+                    {console.log('🎨 Render check:', { photo, isEditMode, condition: (photo || isEditMode) })}
+
+
+                    {/* Photo Section */}
+                    {(photo || isEditMode) && (
+                        <div className="p-6 bg-white border-t-2 border-gray-300">
+                            <h3 className="text-lg font-bold text-gray-800 mb-4">ATTACHED PHOTO</h3>
+
+                            {photo ? (
+                                <div className="space-y-4">
+                                    <div className="relative inline-block">
+                                        <img
+                                            src={getPhotoUrl(photo)}
+                                            alt="Invoice attachment"
+                                            className="max-w-full h-auto max-h-96 rounded-lg border-2 border-gray-300 shadow-lg"
+                                        />
+                                        {isEditMode && (
+                                            <button
+                                                onClick={handlePhotoDelete}
+                                                className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 shadow-lg"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : isEditMode && (
+                                <div className="text-gray-500 text-sm mb-4">No photo attached</div>
+                            )}
+
+                            {isEditMode && (
+                                <div className="mt-4">
+                                    <input
+                                        id="photo-upload"
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                handlePhotoUpload(file);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        onClick={() => document.getElementById('photo-upload').click()}
+                                        disabled={uploadingPhoto}
+                                        className="flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold shadow"
+                                    >
+                                        {uploadingPhoto ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                                Uploading...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Plus className="w-5 h-5 mr-2" />
+                                                {photo ? 'Replace Photo' : 'Add Photo'}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
-            
-                );
+
+    );
 };
 
 export default InvoiceViewEdit;

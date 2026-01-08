@@ -59,27 +59,28 @@ const InvoiceEstimateAdd = () => {
                 name: file.name
             }]);
 
-            const photoUrl = await uploadPhoto(
+            // uploadPhoto now returns just the filename
+            const photoFileName = await uploadPhoto(
                 file,
                 isInvoice ? savedInvoiceData.invoice.invoice_number : savedInvoiceData.invoice.estimate_number
             );
 
-            // Save to database immediately
+            // Save to database immediately - store just the filename
             const { error } = await supabase
                 .from('invoice_photos')
                 .insert([{
                     ...(isInvoice
                         ? { invoice_id: savedInvoiceData.invoice.id }
                         : { estimate_id: savedInvoiceData.invoice.id }),
-                    photo_url: photoUrl
+                    photo_url: photoFileName  // Store filename, not full URL
                 }]);
 
             if (error) throw error;
 
-            // Replace placeholder with actual URL
+            // Replace placeholder with filename
             setPhotos(prev => prev.map(p =>
                 p.id === uploadId
-                    ? { id: uploadId, url: photoUrl, uploading: false }
+                    ? { id: uploadId, url: photoFileName, uploading: false }
                     : p
             ));
 

@@ -73,12 +73,9 @@ export const uploadPhoto = async (file, invoiceNumber) => {
 
         if (error) throw error;
 
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-            .from('invoice-photos')
-            .getPublicUrl(filePath);
-
-        return publicUrl;
+        // Return just the filename, not the full URL
+        // This matches what InvoiceViewEdit expects
+        return filePath;
     } catch (error) {
         console.error('Error uploading photo:', error);
         throw error;

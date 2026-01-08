@@ -4,6 +4,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer';
 import InvoicePDF from '../InvoicePDF';
 import { sendInvoiceToWhatsApp } from '../../utils/sendWhatsApp';
 
+
 const InvoiceSummary = ({
     isInvoice,
     gstDistribution,
@@ -22,7 +23,10 @@ const InvoiceSummary = ({
     photos,
     onRemovePhoto
 }) => {
+
+
     return (
+
         <>
             {/* Total Section */}
             <div className="p-6 bg-gray-50 border-t-2 border-gray-300">
@@ -221,6 +225,8 @@ const InvoiceSummary = ({
                     </div>
                 </div>
             </div>
+
+
         </>
     );
 };
