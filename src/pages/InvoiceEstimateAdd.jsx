@@ -22,7 +22,7 @@ import { ToastContainer } from '../components/invoice/Toast';
 
 // photos 
 import { uploadPhoto } from '../utils/uploadPhoto';
-import PhotoCapture from '../components/invoice/PhotoCapture';
+
 
 const InvoiceEstimateAdd = () => {
 

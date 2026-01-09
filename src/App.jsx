@@ -19,6 +19,7 @@ import CustomerViewEdit from './pages/CustomerViewEdit'
 import Customer from './pages/Customer'
 import CustomerAdd from './pages/CustomerAdd'
 import EstimateSearch from './pages/EstimateSearch'
+import OCRScanner from './pages/OCRScanner';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
             <Route path='/staff' element={<StaffManage />} />
             <Route path='/product/add' element={<ProductAdd />} />
             <Route path='/product' element={<Product />} />
+            
 
             <Route path='/customer/edit/:id' element={<CustomerEdit />} />
             <Route path='/test' element={<TestPage />} />
@@ -50,6 +52,8 @@ function App() {
 
             <Route path='/billing/:type/:id' element={<InvoiceEstimateViewEdit />} />
             <Route path='/billing/add/:type' element={<InvoiceEstimateAdd />} />
+
+            <Route path="/ocr-scanner" element={<OCRScanner />} />
           </Routes>
         </main>
       </div>

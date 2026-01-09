@@ -8,7 +8,8 @@ import {
 BookUser,
 PackageSearch,
 PersonStanding,
-ChartNoAxesCombined
+ChartNoAxesCombined,
+Camera
 } from 'lucide-react';
 
 const Header = () => {
@@ -23,6 +24,7 @@ const Header = () => {
     { name: 'Inventory', to: '/product', icon: PackageSearch },
     { name: 'Staff', to: '/staff', icon: PersonStanding },
     { name: 'Data', to: '/data', icon: ChartNoAxesCombined },
+    { name: 'Camera', to: '/ocr-scanner', icon: Camera },
   ];
 
   const isActive = (path) => location.pathname === path;
