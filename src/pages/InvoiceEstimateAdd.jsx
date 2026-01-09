@@ -580,6 +580,7 @@ const InvoiceEstimateAdd = () => {
             const pdfComponent = (
                 <InvoicePDF
                     pageHead={isInvoice ? "Tax Invoice" : "Estimate"}
+                    isInvoice={isInvoice} 
                     gstIncluded={gstIncluded}
                     invoice={invoiceData}
                     customer={{
