@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Camera, Upload, X, Check, AlertCircle, Trash2, Edit2, Save, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { GoogleGenAI } from "@google/genai";
+import { supabase } from '../supabaseClient';
 
 // ============================================================================
 // UI COMPONENTS
@@ -46,7 +48,7 @@ const constants = {
     MAX_IMAGE_SIZE: 5 * 1024 * 1024, // 5MB
     ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
     MIN_CONFIDENCE_SCORE: 0.7,
-    GEMINI_MODEL: 'gemini-1.5-flash'
+    GEMINI_MODEL: 'gemini-2.5-flash'
 };
 
 const imageUtils = {
@@ -120,6 +122,7 @@ Return a JSON array of products with this exact structure:
   {
     "name": "Product name",
     "quantity": number,
+    "hsn_code": "HSN code",
     "price": number,
     "unit": "unit of measurement (pcs, kg, box, etc.)",
     "confidence": number (0-1)
@@ -135,40 +138,31 @@ Rules:
 - Ensure all prices are numbers without currency symbols`;
 
         try {
-            const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: prompt },
-                                {
-                                    inline_data: {
-                                        mime_type: 'image/jpeg',
-                                        data: imageBase64
-                                    }
+            const ai = new GoogleGenAI({ apiKey });
+            const response = await ai.models.generateContent({
+                model: constants.GEMINI_MODEL,
+                contents: [
+                    {
+                        parts: [
+                            { text: prompt },
+                            {
+                                inlineData: {
+                                    mimeType: 'image/jpeg',
+                                    data: imageBase64
                                 }
-                            ]
-                        }],
-                        generationConfig: {
-                            temperature: 0.1,
-                            topK: 32,
-                            topP: 1,
-                            maxOutputTokens: 2048,
-                        }
-                    })
+                            }
+                        ]
+                    }
+                ],
+                config: {
+                    temperature: 0.1,
+                    topK: 32,
+                    topP: 1,
+                    maxOutputTokens: 2048,
                 }
-            );
+            });
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error?.message || 'Failed to process image');
-            }
-
-            const data = await response.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            const text = response.text;
 
             if (!text) {
                 throw new Error('No response from AI');
@@ -190,6 +184,7 @@ Rules:
                 id: `product_${Date.now()}_${index}`,
                 name: p.name || 'Unknown Product',
                 quantity: Number(p.quantity) || 1,
+                hsn_code: p.hsn_code || '0000',
                 price: Number(p.price) || 0,
                 unit: p.unit || 'pcs',
                 confidence: Number(p.confidence) || 0.5,
@@ -245,19 +240,32 @@ const validationService = {
     }
 };
 
-// Mock product service (replace with actual Supabase integration)
+// Supabase product service - inserts products into the database
 const productService = {
     createProducts: async (products) => {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Map OCR extracted data to match the products table schema
+        const productsToInsert = products.map(p => ({
+            product_name: p.name,
+            purchase_rate: p.price,
+            current_stock: p.quantity,
+            hsn_code: p.hsn_code || '0000',
+            brand: '',
+            vehicle_model: '',
+            minimum_stock: 0
+        }));
 
-        // In real implementation, this would be:
-        // const { data, error } = await supabase.from('products').insert(products);
-        // if (error) throw error;
-        // return data;
+        const { data, error } = await supabase
+            .from('products')
+            .insert(productsToInsert)
+            .select();
 
-        console.log('Products to be created:', products);
-        return products;
+        if (error) {
+            console.error('Supabase insert error:', error);
+            throw new Error(error.message || 'Failed to add products to database');
+        }
+
+        console.log('Products added to database:', data);
+        return data;
     }
 };
 
@@ -406,7 +414,7 @@ function ProductCard({ product, onUpdate, onDelete, isSelected, onToggleSelect }
                         placeholder="Product name"
                         className="w-full px-3 py-2 border rounded-lg"
                     />
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
                         <input
                             type="number"
                             value={editData.quantity}
@@ -428,6 +436,13 @@ function ProductCard({ product, onUpdate, onDelete, isSelected, onToggleSelect }
                             placeholder="Unit"
                             className="px-3 py-2 border rounded-lg"
                         />
+                        <input
+                            type="text"
+                            value={editData.hsn_code}
+                            onChange={(e) => setEditData({ ...editData, hsn_code: e.target.value })}
+                            placeholder="HSN"
+                            className="px-3 py-2 border rounded-lg"
+                        />
                     </div>
                     {!validation.valid && (
                         <Alert variant="error" className="text-xs">
@@ -440,10 +455,11 @@ function ProductCard({ product, onUpdate, onDelete, isSelected, onToggleSelect }
                     <h3 className="font-semibold text-gray-800 mb-2">{product.name}</h3>
                     <div className="flex justify-between text-sm text-gray-600">
                         <span>Quantity: {product.quantity} {product.unit}</span>
-                        <span className="font-semibold">${product.price.toFixed(2)}</span>
+                        <span className="font-semibold">₹{product.price.toFixed(2)}</span>
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
-                        Total: ${(product.quantity * product.price).toFixed(2)}
+                    <div className="flex justify-between text-sm text-gray-500 mt-1">
+                        <span>HSN: {product.hsn_code || 'N/A'}</span>
+                        <span>Total: ₹{(product.quantity * product.price).toFixed(2)}</span>
                     </div>
                 </div>
             )}
@@ -682,7 +698,7 @@ export default function InvoiceScanner() {
         setIsProcessing(true);
         try {
             await productService.createProducts(products);
-            alert('Products added successfully!');
+            alert('Products added successfully to database!');
             setProducts([]);
             setImage(null);
             setImagePreview(null);
