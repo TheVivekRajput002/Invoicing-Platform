@@ -19,7 +19,8 @@ const Data = () => {
     topCustomers: [],
     paymentBreakdown: { cash: 0, online: 0, unpaid: 0 },
     dailyRevenue: [],
-    paymentModeData: []
+    paymentModeData: [],
+    totalStockValue: 0
   });
 
   useEffect(() => {
@@ -61,7 +62,21 @@ const Data = () => {
 
       if (itemsError) throw itemsError;
 
-      calculateStats(invoices, items);
+      // Fetch products for stock value calculation
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('current_stock, purchase_rate');
+
+      if (productsError) throw productsError;
+
+      // Calculate total stock value (quantity × price for all products)
+      const totalStockValue = products.reduce((sum, product) => {
+        const stock = parseFloat(product.current_stock) || 0;
+        const rate = parseFloat(product.purchase_rate) || 0;
+        return sum + (stock * rate);
+      }, 0);
+
+      calculateStats(invoices, items, totalStockValue);
 
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -70,7 +85,7 @@ const Data = () => {
     }
   };
 
-  const calculateStats = (invoices, items) => {
+  const calculateStats = (invoices, items, totalStockValue = 0) => {
     let totalRevenue = 0;
     let paidRevenue = 0;
     let unpaidRevenue = 0;
@@ -175,7 +190,8 @@ const Data = () => {
         unpaid: unpaidCount
       },
       dailyRevenue,
-      paymentModeData
+      paymentModeData,
+      totalStockValue
     });
   };
 
@@ -262,8 +278,8 @@ const Data = () => {
             <button
               onClick={() => setViewMode('overview')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${viewMode === 'overview'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               <TrendingUp size={20} />
@@ -272,8 +288,8 @@ const Data = () => {
             <button
               onClick={() => setViewMode('daywise')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${viewMode === 'daywise'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               <BarChart3 size={20} />
@@ -290,7 +306,7 @@ const Data = () => {
         ) : (
           <>
             {/* Key Metrics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
                 <div className="flex items-center justify-between mb-2">
                   <DollarSign size={32} />
@@ -326,6 +342,15 @@ const Data = () => {
                 <p className="text-sm opacity-90 mb-1">Customers Attended</p>
                 <p className="text-3xl font-bold">{stats.uniqueCustomers}</p>
                 <p className="text-xs opacity-80 mt-1">{stats.totalInvoices} invoices</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg shadow-md p-6 text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <Package size={32} />
+                  <span className="text-xs opacity-90">STOCK</span>
+                </div>
+                <p className="text-sm opacity-90 mb-1">Total Stock Value</p>
+                <p className="text-3xl font-bold">₹{stats.totalStockValue.toLocaleString()}</p>
               </div>
             </div>
 

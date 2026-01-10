@@ -580,7 +580,7 @@ const InvoiceEstimateAdd = () => {
             const pdfComponent = (
                 <InvoicePDF
                     pageHead={isInvoice ? "Tax Invoice" : "Estimate"}
-                    isInvoice={isInvoice} 
+                    isInvoice={isInvoice}
                     gstIncluded={gstIncluded}
                     invoice={invoiceData}
                     customer={{
@@ -726,6 +726,21 @@ const InvoiceEstimateAdd = () => {
     };
 
     const canSave = customerDetails.customerName && customerDetails.phoneNumber && !phoneError && customerDetails.phoneNumber.length === 10;
+
+    // Ctrl+S keyboard shortcut to save
+    useEffect(() => {
+        const handleCtrlS = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                if (canSave && !saving) {
+                    saveInvoice();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleCtrlS);
+        return () => window.removeEventListener('keydown', handleCtrlS);
+    }, [canSave, saving]);
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-8">
