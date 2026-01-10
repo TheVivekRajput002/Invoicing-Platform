@@ -1,5 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { Camera, Upload, X, Check, AlertCircle, Trash2, Edit2, Save, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useCallback, useRef } from 'react';
+import { Camera, Upload, X, Check, AlertCircle, Trash2, Edit2, Save, Plus, ChevronDown, ChevronUp, Crop, RotateCcw } from 'lucide-react';
+import ReactCrop from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { GoogleGenAI } from "@google/genai";
 import { supabase } from '../supabaseClient';
 
@@ -102,8 +104,130 @@ const imageUtils = {
             };
             reader.readAsDataURL(file);
         });
+    },
+
+    getCroppedImage: (image, crop, fileName) => {
+        return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            const scaleX = image.naturalWidth / image.width;
+            const scaleY = image.naturalHeight / image.height;
+
+            canvas.width = crop.width * scaleX;
+            canvas.height = crop.height * scaleY;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(
+                image,
+                crop.x * scaleX,
+                crop.y * scaleY,
+                crop.width * scaleX,
+                crop.height * scaleY,
+                0,
+                0,
+                crop.width * scaleX,
+                crop.height * scaleY
+            );
+
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    reject(new Error('Canvas is empty'));
+                    return;
+                }
+                resolve(new File([blob], fileName || 'cropped-image.jpg', { type: 'image/jpeg' }));
+            }, 'image/jpeg', 0.95);
+        });
     }
 };
+
+// Image Cropper Component
+function ImageCropper({ imageSrc, onCropComplete, onCancel }) {
+    const [crop, setCrop] = useState({
+        unit: '%',
+        width: 90,
+        height: 90,
+        x: 5,
+        y: 5
+    });
+    const [completedCrop, setCompletedCrop] = useState(null);
+    const imgRef = useRef(null);
+
+    const handleCropComplete = async () => {
+        if (!completedCrop || !imgRef.current) {
+            onCancel();
+            return;
+        }
+
+        try {
+            const croppedFile = await imageUtils.getCroppedImage(
+                imgRef.current,
+                completedCrop,
+                'cropped-invoice.jpg'
+            );
+            onCropComplete(croppedFile);
+        } catch (error) {
+            console.error('Error cropping image:', error);
+            onCancel();
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+                <div className="p-4 border-b flex items-center justify-between bg-gray-50">
+                    <div className="flex items-center gap-2">
+                        <Crop className="text-blue-600" size={24} />
+                        <h2 className="text-xl font-bold text-gray-800">Crop Image</h2>
+                    </div>
+                    <p className="text-sm text-gray-600">Drag to adjust the crop area</p>
+                </div>
+
+                <div className="flex-1 overflow-auto p-4 bg-gray-100 flex items-center justify-center">
+                    <ReactCrop
+                        crop={crop}
+                        onChange={(c) => setCrop(c)}
+                        onComplete={(c) => setCompletedCrop(c)}
+                        className="max-h-[70vh]"
+                    >
+                        <img
+                            ref={imgRef}
+                            src={imageSrc}
+                            alt="Crop preview"
+                            style={{ maxHeight: '70vh', maxWidth: '100%' }}
+                            onLoad={(e) => {
+                                // Set initial crop to cover most of the image
+                                const { width, height } = e.currentTarget;
+                                setCrop({
+                                    unit: 'px',
+                                    width: width * 0.9,
+                                    height: height * 0.9,
+                                    x: width * 0.05,
+                                    y: height * 0.05
+                                });
+                            }}
+                        />
+                    </ReactCrop>
+                </div>
+
+                <div className="p-4 border-t flex gap-3 bg-gray-50">
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-100 font-medium flex items-center justify-center gap-2 transition-colors"
+                    >
+                        <RotateCcw size={18} />
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleCropComplete}
+                        className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center justify-center gap-2 transition-colors"
+                    >
+                        <Check size={18} />
+                        Apply Crop
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 // ============================================================================
 // SERVICES
@@ -302,7 +426,7 @@ function ApiKeyInput({ apiKey, setApiKey }) {
     );
 }
 
-function ImageUpload({ onImageSelect, isProcessing, imagePreview }) {
+function ImageUpload({ onImageSelect, isProcessing, imagePreview, onCropClick }) {
     const handleFileChange = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -339,13 +463,24 @@ function ImageUpload({ onImageSelect, isProcessing, imagePreview }) {
             ) : (
                 <div className="relative">
                     <img src={imagePreview} alt="Invoice preview" className="w-full rounded-lg" />
-                    <button
-                        onClick={() => onImageSelect(null)}
-                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
-                        disabled={isProcessing}
-                    >
-                        <X size={20} />
-                    </button>
+                    <div className="absolute top-2 right-2 flex gap-2">
+                        <button
+                            onClick={onCropClick}
+                            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors shadow-lg"
+                            disabled={isProcessing}
+                            title="Crop Image"
+                        >
+                            <Crop size={20} />
+                        </button>
+                        <button
+                            onClick={() => onImageSelect(null)}
+                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                            disabled={isProcessing}
+                            title="Remove Image"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
@@ -618,6 +753,7 @@ export default function InvoiceScanner() {
     const [selectedIds, setSelectedIds] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
+    const [showCropper, setShowCropper] = useState(false);
     const [error, setError] = useState(null);
 
     const handleImageSelect = useCallback((file) => {
@@ -731,6 +867,7 @@ export default function InvoiceScanner() {
                     onImageSelect={handleImageSelect}
                     isProcessing={isProcessing}
                     imagePreview={imagePreview}
+                    onCropClick={() => setShowCropper(true)}
                 />
 
                 {imagePreview && products.length === 0 && (
@@ -782,6 +919,17 @@ export default function InvoiceScanner() {
                         onConfirm={handleConfirm}
                         onCancel={() => setShowConfirmation(false)}
                         isProcessing={isProcessing}
+                    />
+                )}
+
+                {showCropper && imagePreview && (
+                    <ImageCropper
+                        imageSrc={imagePreview}
+                        onCropComplete={(croppedFile) => {
+                            handleImageSelect(croppedFile);
+                            setShowCropper(false);
+                        }}
+                        onCancel={() => setShowCropper(false)}
                     />
                 )}
             </div>
